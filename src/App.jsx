@@ -51,6 +51,8 @@ export default function App() {
 
   const {
     candidates,
+    loading,
+    error,
     handleStatusChange,
     handleForward,
     handleSchedule,
@@ -165,6 +167,20 @@ export default function App() {
 
           {screen === 'hiring' && (
             <div className="max-w-7xl mx-auto px-6 py-5 space-y-4">
+              {/* Loading / error states */}
+              {loading && (
+                <div className="text-center py-16 text-gray-400">
+                  <p className="text-base font-medium">Loading candidates…</p>
+                </div>
+              )}
+              {error && (
+                <div className="text-center py-16 text-red-400">
+                  <p className="text-base font-medium">Failed to load candidates: {error}</p>
+                  <p className="text-sm mt-1 text-gray-400">Make sure the backend server is running on port 3001.</p>
+                </div>
+              )}
+              {!loading && !error && (
+              <>
               {/* Stats */}
               <StatsBar candidates={candidates} selectedRole={selectedRole} />
 
@@ -271,6 +287,8 @@ export default function App() {
                 onPageChange={(p) => { setCurrentPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
                 onPerPageChange={(n) => { setPerPage(n); setCurrentPage(1) }}
               />
+              </>
+              )}
             </div>
           )}
         </main>

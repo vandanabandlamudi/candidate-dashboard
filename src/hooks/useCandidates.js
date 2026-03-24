@@ -1,17 +1,35 @@
-import { useState, useCallback } from 'react'
-import { initialCandidates } from '../data/candidates'
+import { useState, useCallback, useEffect } from 'react'
+import { api } from '../api/client'
 import { FORWARD_MAP } from '../constants/statuses'
 import { getVideoLink } from '../utils/helpers'
 
 /**
  * Manages all candidate state and mutation handlers.
+ * Data is fetched from the PostgreSQL backend via REST API.
  */
 export function useCandidates(showToast) {
-  const [candidates, setCandidates] = useState(initialCandidates)
+  const [candidates, setCandidates] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  // ── Fetch candidates on mount ──────────────────────────────────────────────
+  useEffect(() => {
+    api.getCandidates()
+      .then((data) => setCandidates(data))
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false))
+  }, [])
 
   const updateCandidate = useCallback((id, patch) => {
+    // Optimistic UI update
     setCandidates((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)))
-  }, [])
+    // Persist to backend
+    api.updateCandidate(id, patch).catch((err) => {
+      showToast(`Error: ${err.message}`)
+      // Revert on failure
+      api.getCandidates().then(setCandidates)
+    })
+  }, [showToast])
 
   const handleStatusChange = useCallback(
     (id, newStatus) => {
@@ -35,6 +53,10 @@ export function useCandidates(showToast) {
   const handleSchedule = useCallback(
     (candidate, interviewData) => {
       updateCandidate(candidate.id, { interview: interviewData })
+      // Also persist interview to backend
+      api.createInterview(candidate.id, interviewData).catch((err) => {
+        showToast(`Error saving interview: ${err.message}`)
+      })
       showToast(
         `Interview scheduled for ${candidate.name} on ${interviewData.date} at ${interviewData.time} · ${interviewData.type}`
       )
@@ -57,9 +79,15 @@ export function useCandidates(showToast) {
 
   const handleDelete = useCallback(
     (candidate, clearFromSelection) => {
+      // Optimistic UI update
       setCandidates((prev) => prev.filter((c) => c.id !== candidate.id))
       clearFromSelection(candidate.id)
       showToast(`${candidate.name} archived`)
+      // Persist to backend
+      api.deleteCandidate(candidate.id).catch((err) => {
+        showToast(`Error: ${err.message}`)
+        api.getCandidates().then(setCandidates)
+      })
     },
     [showToast]
   )
@@ -69,7 +97,10 @@ export function useCandidates(showToast) {
       prev.map((c) => {
         if (!selectedIds.has(c.id) || c.status !== 'Interview R1') return c
         const questions = previewMap[c.role] ?? []
-        return { ...c, sentQuestions: [...(c.sentQuestions ?? []), ...questions] }
+        const updated = { ...c, sentQuestions: [...(c.sentQuestions ?? []), ...questions] }
+        // Persist sent questions to backend
+        api.updateCandidate(c.id, { sentQuestions: updated.sentQuestions }).catch(() => {})
+        return updated
       })
     )
   }, [])
@@ -80,16 +111,22 @@ export function useCandidates(showToast) {
         if (c.id !== candidateId) return c
         const existing = c.assessments ?? []
         const idx = existing.findIndex((a) => a.questionId === questionId)
-        const updated = idx >= 0
-          ? existing.map((a, i) => i === idx ? { ...a, score, notes } : a)
-          : [...existing, { questionId, score, notes }]
-        return { ...c, assessments: updated }
+        const updated =
+          idx >= 0
+            ? existing.map((a, i) => (i === idx ? { ...a, score, notes } : a))
+            : [...existing, { questionId, score, notes }]
+        const patched = { ...c, assessments: updated }
+        // Persist to backend
+        api.updateCandidate(c.id, { assessments: patched.assessments }).catch(() => {})
+        return patched
       })
     )
   }, [])
 
   return {
     candidates,
+    loading,
+    error,
     handleStatusChange,
     handleForward,
     handleSchedule,
