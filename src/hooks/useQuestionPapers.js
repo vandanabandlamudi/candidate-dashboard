@@ -80,23 +80,25 @@ export function useQuestionPapers() {
       return { questionId: q.id, answer, correct: null, autoGraded: false, marks: null, maxMarks: marks }
     })
 
+    const submission = {
+      paperId,
+      candidateId,
+      correctionMode,
+      submittedAt: new Date().toISOString(),
+      answers: gradedAnswers,
+      autoScore,
+      autoMax,
+      totalMax: paper.questions.reduce((s, q) => s + (q.marks ?? 1), 0),
+      manualScores: {},
+    }
+
     setSubmissions((prev) => ({
       ...prev,
-      [candidateId]: {
-        ...(prev[candidateId] ?? {}),
-        [paperId]: {
-          paperId,
-          candidateId,
-          correctionMode,
-          submittedAt: new Date().toISOString(),
-          answers: gradedAnswers,
-          autoScore,
-          autoMax,
-          totalMax: paper.questions.reduce((s, q) => s + (q.marks ?? 1), 0),
-          manualScores: {},
-        },
-      },
+      [candidateId]: { ...(prev[candidateId] ?? {}), [paperId]: submission },
     }))
+
+    // Persist to DB
+    api.createSubmission(candidateId, submission).catch(() => {})
   }
 
   const manualGrade = (candidateId, paperId, questionId, marks) => {
@@ -113,6 +115,9 @@ export function useQuestionPapers() {
         },
       }
     })
+
+    // Persist to DB
+    api.gradeSubmission(candidateId, paperId, { questionId, marks }).catch(() => {})
   }
 
   const getSubmission = (candidateId, paperId) => submissions[candidateId]?.[paperId] ?? null

@@ -141,11 +141,11 @@ app.post('/api/papers', async (req, res) => {
 });
 
 app.patch('/api/papers/:id', async (req, res) => {
-  const { title, questions } = req.body;
+  const { title, role, questions } = req.body;
   try {
     const result = await pool.query(
-      `UPDATE question_papers SET title = COALESCE($1, title), questions = COALESCE($2, questions) WHERE id = $3 RETURNING *`,
-      [title ?? null, questions ? JSON.stringify(questions) : null, req.params.id]
+      `UPDATE question_papers SET title = COALESCE($1, title), role = COALESCE($2, role), questions = COALESCE($3, questions) WHERE id = $4 RETURNING *`,
+      [title ?? null, role ?? null, questions ? JSON.stringify(questions) : null, req.params.id]
     );
     if (!result.rows.length) return res.status(404).json({ error: 'Not found' });
     res.json(result.rows[0]);
@@ -223,7 +223,86 @@ app.post('/api/candidates/:id/interviews', async (req, res) => {
 // --- Submissions ---
 app.get('/api/candidates/:id/submissions', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM submissions WHERE candidate_id = $1', [req.params.id]);
+    const subs = await pool.query(
+      `SELECT s.*, json_agg(a ORDER BY a.id) AS answers
+       FROM submissions s
+       LEFT JOIN submission_answers a ON a.submission_id = s.id
+       WHERE s.candidate_id = $1
+       GROUP BY s.id`,
+      [req.params.id]
+    );
+    res.json(subs.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/candidates/:id/submissions', async (req, res) => {
+  const { paperId, correctionMode, submittedAt, answers, autoScore, autoMax, totalMax } = req.body;
+  try {
+    const sub = await pool.query(
+      `INSERT INTO submissions (candidate_id, paper_id, correction_mode, submitted_at, auto_score, auto_max, total_max)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      [req.params.id, paperId, correctionMode, submittedAt, autoScore, autoMax, totalMax]
+    );
+    const subId = sub.rows[0].id;
+    if (answers?.length) {
+      await Promise.all(answers.map((a) =>
+        pool.query(
+          `INSERT INTO submission_answers (submission_id, question_id, answer, correct, auto_graded, marks, max_marks)
+           VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+          [subId, a.questionId, a.answer, a.correct, a.autoGraded, a.marks, a.maxMarks]
+        )
+      ));
+    }
+    res.status(201).json(sub.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/api/candidates/:id/submissions/:paperId/grade', async (req, res) => {
+  const { questionId, marks } = req.body;
+  try {
+    const sub = await pool.query(
+      'SELECT id FROM submissions WHERE candidate_id = $1 AND paper_id = $2',
+      [req.params.id, req.params.paperId]
+    );
+    if (!sub.rows.length) return res.status(404).json({ error: 'Submission not found' });
+    await pool.query(
+      'UPDATE submission_answers SET marks = $1 WHERE submission_id = $2 AND question_id = $3',
+      [marks, sub.rows[0].id, questionId]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Sent Questions ---
+app.post('/api/candidates/:id/sent-questions', async (req, res) => {
+  const { questionIds } = req.body;
+  try {
+    await Promise.all((questionIds ?? []).map((qid) =>
+      pool.query(
+        'INSERT INTO sent_questions (candidate_id, question_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+        [req.params.id, qid]
+      )
+    ));
+    res.status(201).json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/candidates/:id/sent-questions', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT q.*, sq.sent_at FROM sent_questions sq
+       JOIN questions q ON q.id = sq.question_id
+       WHERE sq.candidate_id = $1 ORDER BY sq.sent_at DESC`,
+      [req.params.id]
+    );
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -253,6 +332,15 @@ app.get('/api/submissions', async (_req, res) => {
       answers: answersBySubmission[s.id] ?? [],
     }))
     res.json(result);
+     } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+// --- Assessments ---
+app.get('/api/candidates/:id/assessments', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM assessments WHERE candidate_id = $1', [req.params.id]);
+    res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -272,6 +360,48 @@ app.get('/api/tokens/pending', async (_req, res) => {
       JOIN question_papers qp ON tt.paper_id = qp.id
       WHERE tt.submitted_at IS NULL
       ORDER BY tt.created_at DESC
+          `);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+app.put('/api/candidates/:id/assessments', async (req, res) => {
+  const { questionId, score, notes } = req.body;
+  try {
+    const result = await pool.query(
+      `INSERT INTO assessments (candidate_id, question_id, score, notes)
+       VALUES ($1,$2,$3,$4)
+       ON CONFLICT (candidate_id, question_id)
+       DO UPDATE SET score = EXCLUDED.score, notes = EXCLUDED.notes
+       RETURNING *`,
+      [req.params.id, questionId, score, notes]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Jobs ---
+app.get('/api/jobs', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM jobs ORDER BY job_created_timestamp DESC');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Screening Results ---
+app.get('/api/screening-results', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT sr.*, c.name AS candidate_name, c.email, r.name AS role
+      FROM screening_results sr
+      JOIN candidates c ON c.id = sr.candidate_id
+      LEFT JOIN roles r ON c.role_id = r.id
+      ORDER BY sr.screened_at DESC, sr.score DESC
     `);
     res.json(result.rows);
   } catch (err) {
@@ -306,6 +436,30 @@ app.post('/api/papers/import-from-drive', async (req, res) => {
       [id, doc.fileName, role, JSON.stringify(questions)]
     );
     res.status(201).json(result.rows[0]);
+      } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+app.post('/api/screening-results', async (req, res) => {
+  const { results } = req.body; // array of { id (candidate_id), job_title, department, score, verdict, reasons, concern }
+  if (!results?.length) return res.status(400).json({ error: 'results array required' });
+  try {
+    await Promise.all(results.map((r) =>
+      pool.query(
+        `INSERT INTO screening_results (candidate_id, job_title, department, score, verdict, reasons, concern)
+         VALUES ($1,$2,$3,$4,$5,$6,$7)
+         ON CONFLICT (candidate_id) DO UPDATE SET
+           job_title   = EXCLUDED.job_title,
+           department  = EXCLUDED.department,
+           score       = EXCLUDED.score,
+           verdict     = EXCLUDED.verdict,
+           reasons     = EXCLUDED.reasons,
+           concern     = EXCLUDED.concern,
+           screened_at = CURRENT_TIMESTAMP`,
+        [r.id, r.job_title ?? null, r.department ?? null, r.score, r.verdict, r.reasons ?? [], r.concern ?? null]
+      )
+    ));
+    res.status(201).json({ saved: results.length });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -449,6 +603,14 @@ app.post('/api/test/:token/submit', async (req, res) => {
     }
 
     res.status(201).json({ submissionId });
+      } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+app.delete('/api/screening-results', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM screening_results');
+    res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -470,6 +632,70 @@ app.get('/api/darwinbox/jobs', async (req, res) => {
       return res.status(502).json({ error: data.message || 'Darwinbox error' });
     }
     res.json(data.data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- AI Screening ---
+app.post('/api/screen', async (req, res) => {
+  const { job, candidates } = req.body;
+  if (!job || !candidates?.length) {
+    return res.status(400).json({ error: 'job and candidates are required' });
+  }
+
+  const prompt = `You are an expert recruiter. Screen the following candidates for this job and return a JSON array.
+
+JOB:
+- Title: ${job.job_title}
+- Department: ${job.department}
+- Experience required: ${job.experience_from || 0}–${job.experience_to || '∞'} years
+- Salary range: ₹${job.salary_min || 'N/A'} – ₹${job.salary_max || 'N/A'}
+- Type: ${job.employee_type}
+- Remote: ${job.is_remote ? 'Yes' : 'No'}
+
+CANDIDATES:
+${candidates.map((c) => `ID: ${c.id}
+   Name: ${c.name}
+   Role applied: ${c.role}
+   Experience: ${c.exp} years
+   Skills: ${(c.skills || []).join(', ')}
+   Summary: ${c.summary}
+   Current title: ${c.title} at ${c.company}`).join('\n\n')}
+
+Return ONLY a valid JSON array (no markdown, no explanation) with one object per candidate.
+Use the exact numeric ID provided above for each candidate — do not change or reassign IDs.
+[
+  {
+    "id": <exact id from above>,
+    "name": "<name>",
+    "score": <0-100>,
+    "verdict": "Strong Match" | "Good Match" | "Partial Match" | "Not a Match",
+    "reasons": ["<reason 1>", "<reason 2>", "<reason 3>"],
+    "concern": "<one main concern or null>"
+  }
+]
+
+Score based on: role fit (40%), experience range (30%), skills match (20%), salary fit (10%).
+Sort by score descending.`;
+
+  try {
+    const response = await fetch('https://ollama.com/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.OLLAMA_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'gemma3:4b',
+        messages: [{ role: 'user', content: prompt }],
+        stream: false,
+      }),
+    });
+    const data = await response.json();
+    const raw = data.message.content.trim().replace(/```json|```/g, '').trim();
+    const results = JSON.parse(raw);
+    res.json(results);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -112,8 +112,11 @@ export function useCandidates(showToast) {
         if (!selectedIds.has(c.id) || c.status !== 'Interview R1') return c
         const questions = previewMap[c.role] ?? []
         const updated = { ...c, sentQuestions: [...(c.sentQuestions ?? []), ...questions] }
-        // Persist sent questions to backend
-        api.updateCandidate(c.id, { sentQuestions: updated.sentQuestions }).catch(() => {})
+        // Persist to sent_questions table
+        const questionIds = questions.map((q) => q.id).filter(Boolean)
+        if (questionIds.length) {
+          api.createSentQuestions(c.id, questionIds).catch(() => {})
+        }
         return updated
       })
     )
@@ -129,18 +132,18 @@ export function useCandidates(showToast) {
           idx >= 0
             ? existing.map((a, i) => (i === idx ? { ...a, score, notes } : a))
             : [...existing, { questionId, score, notes }]
-        const patched = { ...c, assessments: updated }
-        // Persist to backend
-        api.updateCandidate(c.id, { assessments: patched.assessments }).catch(() => {})
-        return patched
+        return { ...c, assessments: updated }
       })
     )
+    // Persist to assessments table via upsert
+    api.upsertAssessment(candidateId, { questionId, score, notes }).catch(() => {})
   }, [])
 
   return {
     candidates,
     loading,
     error,
+    refetch: fetchCandidates,
     handleStatusChange,
     handleForward,
     handleReject,

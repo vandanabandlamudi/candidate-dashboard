@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useJobs } from '../hooks/useJobs'
 
+const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+
 const TYPE_COLORS = {
   'Full Time':  'bg-green-50 text-green-700',
   'Part Time':  'bg-blue-50 text-blue-700',
@@ -8,7 +10,102 @@ const TYPE_COLORS = {
   'Internship': 'bg-purple-50 text-purple-700',
 }
 
-function JobCard({ job }) {
+const VERDICT_STYLES = {
+  'Strong Match':  { bar: 'bg-green-500',  badge: 'bg-green-50 text-green-700',  border: 'border-green-200' },
+  'Good Match':    { bar: 'bg-blue-500',   badge: 'bg-blue-50 text-blue-700',    border: 'border-blue-200'  },
+  'Partial Match': { bar: 'bg-amber-400',  badge: 'bg-amber-50 text-amber-700',  border: 'border-amber-200' },
+  'Not a Match':   { bar: 'bg-red-400',    badge: 'bg-red-50 text-red-600',      border: 'border-red-200'   },
+}
+
+// ── Screening Modal ───────────────────────────────────────────────────────────
+function ScreeningModal({ job, results, loading, error, onClose }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+
+        {/* Header */}
+        <div className="px-6 py-5 border-b border-gray-100 flex items-start justify-between">
+          <div>
+            <h2 className="text-base font-bold text-gray-900">AI Candidate Screening</h2>
+            <p className="text-xs text-gray-500 mt-0.5">{job.job_title} · {job.department}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+        </div>
+
+        {/* Body */}
+        <div className="overflow-y-auto flex-1 px-6 py-4 space-y-3">
+
+          {loading && (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+              <p className="text-sm text-gray-500">Claude is screening candidates…</p>
+            </div>
+          )}
+
+          {error && (
+            <div className="text-center py-12 text-red-500">
+              <p className="text-sm font-medium">Screening failed: {error}</p>
+              <p className="text-xs text-gray-400 mt-1">Check your ANTHROPIC_API_KEY in server/.env</p>
+            </div>
+          )}
+
+          {!loading && !error && results.map((r) => {
+            const style = VERDICT_STYLES[r.verdict] || VERDICT_STYLES['Partial Match']
+            return (
+              <div key={r.id} className={`rounded-xl border ${style.border} p-4 space-y-2.5`}>
+                {/* Name + verdict + score */}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center shrink-0">
+                      {r.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                    </div>
+                    <p className="text-sm font-semibold text-gray-900">{r.name}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${style.badge}`}>{r.verdict}</span>
+                    <span className="text-sm font-bold text-gray-700">{r.score}/100</span>
+                  </div>
+                </div>
+
+                {/* Score bar */}
+                <div className="w-full bg-gray-100 rounded-full h-1.5">
+                  <div className={`h-1.5 rounded-full ${style.bar}`} style={{ width: `${r.score}%` }} />
+                </div>
+
+                {/* Reasons */}
+                <ul className="space-y-0.5">
+                  {r.reasons.map((reason, i) => (
+                    <li key={i} className="text-[11px] text-gray-600 flex gap-1.5">
+                      <span className="text-green-500 shrink-0">✓</span>{reason}
+                    </li>
+                  ))}
+                </ul>
+
+                {/* Concern */}
+                {r.concern && (
+                  <p className="text-[11px] text-amber-700 bg-amber-50 rounded-lg px-3 py-1.5 flex gap-1.5">
+                    <span className="shrink-0">⚠</span>{r.concern}
+                  </p>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-gray-100">
+          <button onClick={onClose} className="w-full text-sm text-gray-600 font-medium py-2 rounded-xl border border-gray-200 hover:bg-gray-50">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Job Card ──────────────────────────────────────────────────────────────────
+function JobCard({ job, candidates, onScreen }) {
   const [expanded, setExpanded] = useState(false)
   const typeColor = TYPE_COLORS[job.employee_type] || 'bg-gray-100 text-gray-600'
 
@@ -25,7 +122,7 @@ function JobCard({ job }) {
         </span>
       </div>
 
-      {/* Tags row */}
+      {/* Tags */}
       <div className="flex flex-wrap gap-1.5">
         {job.is_remote === 1 && (
           <span className="text-[10px] font-medium bg-teal-50 text-teal-700 px-2 py-0.5 rounded-full">Remote</span>
@@ -79,22 +176,32 @@ function JobCard({ job }) {
 
       {/* Footer */}
       <div className="flex items-center justify-between pt-1 border-t border-gray-100">
-        <p className="text-[10px] text-gray-400">{job.job_code}</p>
         <button
           onClick={() => setExpanded((v) => !v)}
           className="text-[11px] text-indigo-500 font-medium hover:text-indigo-700"
         >
           {expanded ? 'Less ▲' : 'Details ▼'}
         </button>
+        <button
+          onClick={() => onScreen(job)}
+          className="flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+        >
+          ✦ Screen Candidates
+        </button>
       </div>
     </div>
   )
 }
 
-export function JobsScreen() {
+// ── Main Screen ───────────────────────────────────────────────────────────────
+export function JobsScreen({ candidates = [] }) {
   const { jobs, loading, error, refetch } = useJobs()
-  const [search, setSearch] = useState('')
-  const [typeFilter, setTypeFilter] = useState('All')
+  const [search,      setSearch]      = useState('')
+  const [typeFilter,  setTypeFilter]  = useState('All')
+  const [screenJob,   setScreenJob]   = useState(null)
+  const [screenRes,   setScreenRes]   = useState([])
+  const [screenLoad,  setScreenLoad]  = useState(false)
+  const [screenErr,   setScreenErr]   = useState(null)
 
   const types = ['All', ...new Set(jobs.map((j) => j.employee_type).filter(Boolean))]
 
@@ -106,13 +213,36 @@ export function JobsScreen() {
     return matchType && matchSearch
   })
 
+  const handleScreen = async (job) => {
+    setScreenJob(job)
+    setScreenRes([])
+    setScreenErr(null)
+    setScreenLoad(true)
+
+    // Send all candidates — Claude will match by role/skills
+    try {
+      const res = await fetch(`${BASE}/api/screen`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ job, candidates }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Screening failed')
+      setScreenRes(data)
+    } catch (err) {
+      setScreenErr(err.message)
+    } finally {
+      setScreenLoad(false)
+    }
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-5 space-y-4">
       {/* Top bar */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h2 className="text-base font-bold text-gray-900">Job Listings</h2>
-          <p className="text-xs text-gray-400 mt-0.5">Pulled from Darwinbox · {jobs.length} open jobs</p>
+          <p className="text-xs text-gray-400 mt-0.5">Darwinbox · {jobs.length} open jobs · click ✦ Screen Candidates to auto-screen with Claude</p>
         </div>
         <button
           onClick={refetch}
@@ -147,24 +277,23 @@ export function JobsScreen() {
         </div>
       </div>
 
-      {/* States */}
       {loading && (
         <div className="text-center py-16 text-gray-400">
-          <p className="text-base font-medium">Loading jobs from Darwinbox…</p>
+          <p className="text-base font-medium">Loading jobs…</p>
         </div>
       )}
       {error && (
         <div className="text-center py-16 text-red-400">
           <p className="text-base font-medium">Failed to load jobs: {error}</p>
-          <p className="text-sm mt-1 text-gray-400">Make sure the backend server is running and Darwinbox credentials are set.</p>
         </div>
       )}
 
-      {/* Grid */}
       {!loading && !error && (
         filtered.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map((job) => <JobCard key={job.job_id} job={job} />)}
+            {filtered.map((job) => (
+              <JobCard key={job.job_id} job={job} candidates={candidates} onScreen={handleScreen} />
+            ))}
           </div>
         ) : (
           <div className="text-center py-16 text-gray-400">
@@ -172,6 +301,16 @@ export function JobsScreen() {
             <p className="text-base font-medium text-gray-500">No jobs match your filters</p>
           </div>
         )
+      )}
+
+      {screenJob && (
+        <ScreeningModal
+          job={screenJob}
+          results={screenRes}
+          loading={screenLoad}
+          error={screenErr}
+          onClose={() => setScreenJob(null)}
+        />
       )}
     </div>
   )

@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS questions (
 CREATE TABLE IF NOT EXISTS question_papers (
     id         VARCHAR(50) PRIMARY KEY,
     title      VARCHAR(200),
+    role       VARCHAR(100),
     questions  JSONB NOT NULL DEFAULT '[]',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -93,11 +94,53 @@ CREATE TABLE IF NOT EXISTS submission_answers (
     max_marks     INT NOT NULL
 );
 
--- 11. assessments
+-- 11. jobs
+CREATE TABLE IF NOT EXISTS jobs (
+    id                    SERIAL PRIMARY KEY,
+    job_id                VARCHAR(50) NOT NULL UNIQUE,
+    job_code              VARCHAR(20),
+    group_company         VARCHAR(100),
+    parent_department     VARCHAR(100),
+    department            VARCHAR(100),
+    division              VARCHAR(100),
+    business_unit         VARCHAR(50),
+    location              TEXT[],
+    location_city         TEXT[],
+    location_country      VARCHAR(50),
+    job_title             VARCHAR(200) NOT NULL,
+    post_on_careers_page  INT DEFAULT 0,
+    post_on_refer_page    INT DEFAULT 0,
+    post_on_ijp_page      INT DEFAULT 0,
+    employee_type         VARCHAR(50),
+    job_created_timestamp VARCHAR(30),
+    job_updated_timestamp VARCHAR(30),
+    experience_from       VARCHAR(10),
+    experience_to         VARCHAR(10),
+    is_remote             INT DEFAULT 0,
+    salary_min            VARCHAR(20),
+    salary_max            VARCHAR(20)
+);
+
+-- 12. screening_results
+CREATE TABLE IF NOT EXISTS screening_results (
+    id           SERIAL PRIMARY KEY,
+    candidate_id INT NOT NULL REFERENCES candidates(id) ON DELETE CASCADE,
+    job_title    VARCHAR(200),
+    department   VARCHAR(200),
+    score        INT NOT NULL,
+    verdict      VARCHAR(50) NOT NULL,
+    reasons      TEXT[] NOT NULL DEFAULT '{}',
+    concern      TEXT,
+    screened_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (candidate_id)
+);
+
+-- 12. assessments
 CREATE TABLE IF NOT EXISTS assessments (
     id           SERIAL PRIMARY KEY,
     candidate_id INT NOT NULL REFERENCES candidates(id),
     question_id  VARCHAR(10) NOT NULL REFERENCES questions(id),
     score        INT,
-    notes        TEXT
+    notes        TEXT,
+    UNIQUE (candidate_id, question_id)
 );

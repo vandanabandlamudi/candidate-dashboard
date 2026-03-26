@@ -28,6 +28,17 @@ export const api = {
   getSubmissions:      (id) => request(`/api/candidates/${id}/submissions`),
   getAllSubmissions:    ()   => request('/api/submissions'),
   getPendingTokens:    ()   => request('/api/tokens/pending'),
+  // getSubmissions:      (id)              => request(`/api/candidates/${id}/submissions`),
+  createSubmission:    (id, data)        => request(`/api/candidates/${id}/submissions`, { method: 'POST', body: JSON.stringify(data) }),
+  gradeSubmission:     (id, paperId, data) => request(`/api/candidates/${id}/submissions/${paperId}/grade`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  // Sent questions
+  getSentQuestions:    (id)              => request(`/api/candidates/${id}/sent-questions`),
+  createSentQuestions: (id, questionIds) => request(`/api/candidates/${id}/sent-questions`, { method: 'POST', body: JSON.stringify({ questionIds }) }),
+
+  // Assessments
+  getAssessments:      (id)              => request(`/api/candidates/${id}/assessments`),
+  upsertAssessment:    (id, data)        => request(`/api/candidates/${id}/assessments`, { method: 'PUT', body: JSON.stringify(data) }),
 
   // Roles & Statuses
   getRoles:        ()           => request('/api/roles'),
@@ -35,6 +46,14 @@ export const api = {
 
   // Questions
   getQuestions:    ()           => request('/api/questions'),
+
+  // Jobs
+  getJobs: () => request('/api/jobs'),
+
+  // Screening Results
+  getScreeningResults:  ()       => request('/api/screening-results'),
+  saveScreeningResults: (results) => request('/api/screening-results', { method: 'POST', body: JSON.stringify({ results }) }),
+  clearScreeningResults: ()      => request('/api/screening-results', { method: 'DELETE' }),
 
   // Papers
   getPapers:       ()           => request('/api/papers'),

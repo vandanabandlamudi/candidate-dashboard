@@ -35,6 +35,7 @@ import { ManageQuestionsModal }  from './components/modals/ManageQuestionsModal'
 import { AssessmentsScreen }     from './screens/AssessmentsScreen'
 import { QuestionPapersScreen }  from './screens/QuestionPapersScreen'
 import { JobsScreen }            from './screens/JobsScreen'
+import { ScreeningScreen }       from './screens/ScreeningScreen'
 
 export default function App() {
   // ── Core state ─────────────────────────────────────────────────────────────
@@ -59,6 +60,7 @@ export default function App() {
     candidates,
     loading,
     error,
+    refetch,
     handleStatusChange,
     handleForward,
     handleReject,
@@ -155,7 +157,9 @@ export default function App() {
         />
 
         <main className="flex-1 flex flex-col min-h-0">
-          {screen === 'jobs' && <JobsScreen />}
+          {screen === 'jobs' && <JobsScreen candidates={candidates} />}
+
+          {screen === 'screening' && <ScreeningScreen candidates={candidates} onStatusChange={refetch} />}
 
           {screen === 'assessments' && (
             <AssessmentsScreen
