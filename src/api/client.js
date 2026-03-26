@@ -33,4 +33,10 @@ export const api = {
 
   // Questions
   getQuestions:    ()           => request('/api/questions'),
+
+  // Papers
+  getPapers:       ()           => request('/api/papers'),
+  createPaper:     (data)       => request('/api/papers', { method: 'POST', body: JSON.stringify(data) }),
+  updatePaper:     (id, patch)  => request(`/api/papers/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
+  deletePaper:     (id)         => request(`/api/papers/${id}`, { method: 'DELETE' }),
 }

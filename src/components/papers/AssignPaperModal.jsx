@@ -1,5 +1,5 @@
 export function AssignPaperModal({ paper, candidates, submissions, onAssign, onClose }) {
-  const eligible = candidates.filter((c) => c.role === paper.role)
+  const eligible = candidates.filter((c) => c.role === paper.role && c.status === 'Interview R1')
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -15,7 +15,7 @@ export function AssignPaperModal({ paper, candidates, submissions, onAssign, onC
 
         <div className="px-6 py-4 space-y-2 overflow-y-auto max-h-80">
           {eligible.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">No candidates for this role.</p>
+            <p className="text-sm text-gray-400 text-center py-8">No candidates in Interview R1 for this role.</p>
           ) : (
             eligible.map((c) => {
               const already = !!submissions[c.id]?.[paper.id]

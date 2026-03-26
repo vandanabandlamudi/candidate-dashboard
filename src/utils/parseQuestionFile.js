@@ -220,22 +220,78 @@ async function extractTxtText(file) {
   })
 }
 
-// ─── Line parser ────────────────────────────────────────────────────────────
+// ─── MCQ parser ─────────────────────────────────────────────────────────────
 
-function parseLines(raw) {
+/**
+ * Parse raw text into an array of MCQ question objects.
+ *
+ * Expected format (flexible):
+ *   1. What is React?
+ *   A) A backend framework
+ *   B) A frontend library
+ *   C) A database
+ *   D) A CSS tool
+ *   Answer: B
+ *
+ * Returns: [{ text, options: { A, B, C, D }, correctOption, type: 'mcq' }]
+ * Falls back to open-ended { text, type: 'open-ended' } if no options found.
+ */
+function parseMcqBlocks(raw) {
   const lines = raw
     .split(/\r?\n/)
     .map((l) => l.trim())
     .filter(Boolean)
 
-  return lines
-    .map((line) =>
-      line
-        .replace(/^\(?\d+[\.\)]\s*/, '')   // "1." / "1)" / "(1)"
-        .replace(/^Q\d+[\.\):\s]+/i, '')   // "Q1." / "Q1:"
+  const questions = []
+  let current     = null
+  let lastOption  = null  // track last option key for multi-line option text
+
+  const isQuestionLine = (l) => /^(\(?\d+[\.\)]\s*|Q\d+[\.\):\s]+)/i.test(l)
+  const isOptionLine   = (l) => /^[A-Da-d][\.\)]\s+\S/.test(l)
+  const isAnswerLine   = (l) => /^(answer|ans|correct)[:\s]+[A-Da-d]/i.test(l)
+
+  const pushCurrent = () => {
+    if (!current) return
+    const hasOptions = Object.keys(current.options).length >= 2
+    if (hasOptions) {
+      questions.push({ ...current, type: 'mcq' })
+    } else if (current.text.length > 5) {
+      questions.push({ text: current.text, type: 'open-ended', options: {}, correctOption: null })
+    }
+    current    = null
+    lastOption = null
+  }
+
+  for (const line of lines) {
+    if (isQuestionLine(line)) {
+      pushCurrent()
+      const text = line
+        .replace(/^\(?\d+[\.\)]\s*/, '')
+        .replace(/^Q\d+[\.\):\s]+/i, '')
         .trim()
-    )
-    .filter((q) => q.length > 5)
+      current    = { text, options: {}, correctOption: null }
+      lastOption = null
+    } else if (isOptionLine(line) && current) {
+      const key       = line[0].toUpperCase()
+      const val       = line.replace(/^[A-Da-d][\.\)]\s+/, '').trim()
+      current.options[key] = val
+      lastOption      = key
+    } else if (isAnswerLine(line) && current) {
+      const match = line.match(/[A-Da-d]/i)
+      if (match) current.correctOption = match[0].toUpperCase()
+      lastOption = null
+    } else if (current) {
+      // continuation line — append to last option if inside options, else to question text
+      if (lastOption) {
+        current.options[lastOption] += ' ' + line
+      } else if (Object.keys(current.options).length === 0) {
+        current.text += ' ' + line
+      }
+    }
+  }
+  pushCurrent()
+
+  return questions
 }
 
 // ─── Entry point ─────────────────────────────────────────────────────────────
@@ -252,5 +308,5 @@ export async function parseQuestionsFromFile(file) {
     raw = await extractTxtText(file)
   }
 
-  return parseLines(raw)
+  return parseMcqBlocks(raw)
 }

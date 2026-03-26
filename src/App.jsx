@@ -17,8 +17,9 @@ import { FilterPanel }    from './components/layout/FilterPanel'
 import { BulkActionBar }  from './components/layout/BulkActionBar'
 
 // Candidates
-import { CandidateCard }  from './components/candidates/CandidateCard'
-import { CandidateTable } from './components/candidates/CandidateTable'
+import { CandidateCard }         from './components/candidates/CandidateCard'
+import { CandidateTable }        from './components/candidates/CandidateTable'
+import { CandidateDetailPanel }  from './components/candidates/CandidateDetailPanel'
 
 // Common
 import { Pagination } from './components/common/Pagination'
@@ -33,6 +34,7 @@ import { SentQuestionsDrawer }   from './components/modals/SentQuestionsDrawer'
 import { ManageQuestionsModal }  from './components/modals/ManageQuestionsModal'
 import { AssessmentsScreen }     from './screens/AssessmentsScreen'
 import { QuestionPapersScreen }  from './screens/QuestionPapersScreen'
+import { JobsScreen }            from './screens/JobsScreen'
 
 export default function App() {
   // ── Core state ─────────────────────────────────────────────────────────────
@@ -43,6 +45,7 @@ export default function App() {
   const [deleteC,        setDeleteC]        = useState(null)
   const [drawerC,        setDrawerC]        = useState(null)
   const [showManageQ,    setShowManageQ]    = useState(false)
+  const [detailC,        setDetailC]        = useState(null)
 
   // ── Hooks ──────────────────────────────────────────────────────────────────
   const { toastMessage, showToast } = useToast()
@@ -122,6 +125,7 @@ export default function App() {
     onVideo:         handleVideo,
     onDelete:        setDeleteC,
     onViewQuestions: setDrawerC,
+    onViewDetail:    setDetailC,
   }
 
   const searchTerm = globalSearch || keyword
@@ -147,6 +151,8 @@ export default function App() {
         />
 
         <main className="flex-1 flex flex-col min-h-0">
+          {screen === 'jobs' && <JobsScreen />}
+
           {screen === 'assessments' && (
             <AssessmentsScreen candidates={candidates} onUpdateAssessment={updateAssessment} />
           )}
@@ -182,15 +188,20 @@ export default function App() {
               {!loading && !error && (
               <>
               {/* Stats */}
-              <StatsBar candidates={candidates} selectedRole={selectedRole} />
+              <StatsBar
+                candidates={candidates}
+                selectedRole={selectedRole}
+                activeStatus={selectedStatus}
+                onStatusFilter={(v) => { setSelectedStatus(v); resetPage(); clearSelection() }}
+              />
 
               {/* Filters */}
               <FilterPanel
-                selectedRole={selectedRole}     onRoleChange={(v)   => { setSelectedRole(v);   resetPage() }}
-                selectedStatus={selectedStatus} onStatusChange={(v) => { setSelectedStatus(v); resetPage() }}
-                keyword={keyword}               onKeywordChange={(v) => { setKeyword(v);        resetPage() }}
+                selectedRole={selectedRole}     onRoleChange={(v)   => { setSelectedRole(v);   resetPage(); clearSelection() }}
+                selectedStatus={selectedStatus} onStatusChange={(v) => { setSelectedStatus(v); resetPage(); clearSelection() }}
+                keyword={keyword}               onKeywordChange={(v) => { setKeyword(v);        resetPage(); clearSelection() }}
                 hasActiveFilters={hasActiveFilters}
-                onClearAll={clearAllFilters}
+                onClearAll={() => { clearAllFilters(); clearSelection() }}
               />
 
               {/* Bulk actions */}
@@ -246,9 +257,9 @@ export default function App() {
 
               {/* Card or Table view */}
               {viewMode === 'card' ? (
-                filtered.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {paginated.map((c) => (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filtered.length > 0 ? (
+                    paginated.map((c) => (
                       <CandidateCard
                         key={c.id}
                         candidate={c}
@@ -257,25 +268,34 @@ export default function App() {
                         onToggleSelect={toggleSelect}
                         {...candidateHandlers}
                       />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-16 text-gray-400">
-                    <p className="text-5xl mb-3">🔍</p>
-                    <p className="text-base font-medium text-gray-500">No candidates match your filters</p>
-                  </div>
-                )
+                    ))
+                  ) : (
+                    <div className="col-span-3 flex flex-col items-center justify-center text-gray-400">
+                      <p className="text-5xl mb-3">🔍</p>
+                      <p className="text-base font-medium text-gray-500">No candidates match your filters</p>
+                    </div>
+                  )}
+                </div>
               ) : (
-                <CandidateTable
-                  rows={paginated}
-                  searchTerm={searchTerm}
-                  selectedIds={selectedIds}
-                  onToggleSelect={toggleSelect}
-                  sortField={sortField}
-                  sortDir={sortDir}
-                  onSort={handleSort}
-                  {...candidateHandlers}
-                />
+                <div className="min-h-[400px]">
+                  {paginated.length > 0 ? (
+                    <CandidateTable
+                      rows={paginated}
+                      searchTerm={searchTerm}
+                      selectedIds={selectedIds}
+                      onToggleSelect={toggleSelect}
+                      sortField={sortField}
+                      sortDir={sortDir}
+                      onSort={handleSort}
+                      {...candidateHandlers}
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-[400px] text-gray-400">
+                      <p className="text-5xl mb-3">🔍</p>
+                      <p className="text-base font-medium text-gray-500">No candidates match your filters</p>
+                    </div>
+                  )}
+                </div>
               )}
 
               {/* Pagination */}
@@ -331,6 +351,18 @@ export default function App() {
           candidate={deleteC}
           onConfirm={onDeleteConfirm}
           onClose={() => setDeleteC(null)}
+        />
+      )}
+
+      {detailC && (
+        <CandidateDetailPanel
+          candidate={candidates.find((c) => c.id === detailC.id) ?? detailC}
+          onClose={() => setDetailC(null)}
+          onStatusChange={handleStatusChange}
+          onForward={handleForward}
+          onSchedule={setScheduleC}
+          onDelete={setDeleteC}
+          onViewQuestions={setDrawerC}
         />
       )}
 

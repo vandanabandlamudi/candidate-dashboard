@@ -26,32 +26,30 @@ CREATE TABLE IF NOT EXISTS candidates (
     title        VARCHAR(100),
     company      VARCHAR(100),
     applied_date DATE,
-    summary      TEXT
+    summary      TEXT,
+    skills       TEXT[]
 );
 
 -- 4. questions
 CREATE TABLE IF NOT EXISTS questions (
-    id      VARCHAR(10) PRIMARY KEY,
-    role_id INT NOT NULL REFERENCES roles(id),
-    text    TEXT NOT NULL,
-    type    VARCHAR(20) NOT NULL CHECK (type IN ('mcq', 'open-ended')),
-    set     INT
+    id             VARCHAR(50) PRIMARY KEY,
+    role_id        INT NOT NULL REFERENCES roles(id),
+    text           TEXT NOT NULL,
+    type           VARCHAR(20) NOT NULL CHECK (type IN ('mcq', 'open-ended')),
+    set_number     INT,
+    option_a       TEXT,
+    option_b       TEXT,
+    option_c       TEXT,
+    option_d       TEXT,
+    correct_option VARCHAR(1)
 );
 
 -- 5. question_papers
 CREATE TABLE IF NOT EXISTS question_papers (
     id         VARCHAR(50) PRIMARY KEY,
     title      VARCHAR(200),
+    questions  JSONB NOT NULL DEFAULT '[]',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- 6. paper_questions
-CREATE TABLE IF NOT EXISTS paper_questions (
-    id             SERIAL PRIMARY KEY,
-    paper_id       VARCHAR(50) NOT NULL REFERENCES question_papers(id),
-    question_id    VARCHAR(10) NOT NULL REFERENCES questions(id),
-    marks          INT DEFAULT 1,
-    correct_option VARCHAR(255)
 );
 
 -- 7. interviews

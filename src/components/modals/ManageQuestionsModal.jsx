@@ -49,7 +49,26 @@ function QuestionSet({ setKey, questions, onRemove }) {
           {questions.map((q, i) => (
             <div key={q.id} className="flex gap-2.5 items-start px-4 py-2.5 group hover:bg-gray-50">
               <span className="text-xs font-bold text-indigo-400 mt-0.5 w-5 shrink-0">Q{i + 1}</span>
-              <p className="flex-1 text-xs text-gray-700 leading-relaxed">{q.text}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-gray-700 leading-relaxed">{q.text}</p>
+                {/* MCQ options */}
+                {q.type === 'mcq' && q.options && Object.keys(q.options).length > 0 && (
+                  <div className="mt-1.5 grid grid-cols-2 gap-x-4 gap-y-0.5">
+                    {Object.entries(q.options).map(([key, val]) => (
+                      <p key={key} className={`text-[10px] leading-relaxed ${
+                        key === q.correctOption
+                          ? 'text-green-700 font-semibold'
+                          : 'text-gray-400'
+                      }`}>
+                        {key === q.correctOption ? '✓ ' : ''}{key}) {val}
+                      </p>
+                    ))}
+                  </div>
+                )}
+                {q.type === 'mcq' && (
+                  <span className="inline-block mt-1 text-[9px] font-semibold bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded">MCQ</span>
+                )}
+              </div>
               {setKey !== 'default' && (
                 <button
                   onClick={() => onRemove(q.id)}
@@ -118,9 +137,12 @@ export function ManageQuestionsModal({ questionBank, onSave, onClose }) {
         setUploadMsg('No questions found in the file.')
       } else {
         const prefix = role.split(' ').map((w) => w[0].toLowerCase()).join('')
-        const newQs  = parsed.map((t, i) => ({
-          id:   `${prefix}_doc_${Date.now()}_${i}`,
-          text: t,
+        const newQs  = parsed.map((q, i) => ({
+          id:            `${prefix}_doc_${Date.now()}_${i}`,
+          text:          q.text,
+          type:          q.type,
+          options:       q.options       ?? {},
+          correctOption: q.correctOption ?? null,
         }))
         setBank((prev) => ({
           ...prev,
@@ -205,7 +227,7 @@ export function ManageQuestionsModal({ questionBank, onSave, onClose }) {
             <p className="text-xs font-medium text-gray-600">
               {uploading ? 'Parsing file…' : 'Drop a .txt, .docx, or .pdf to bulk import'}
             </p>
-            <p className="text-[10px] text-gray-400">or click to browse · one question per line</p>
+            <p className="text-[10px] text-gray-400">or click to browse · MCQ format: question, A) B) C) D) options, Answer: X</p>
             {uploadMsg && (
               <p className={`text-[10px] font-semibold mt-0.5 ${
                 uploadMsg.startsWith('No') || uploadMsg.startsWith('Unsupported') || uploadMsg.startsWith('Failed')

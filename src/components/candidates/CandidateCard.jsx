@@ -16,6 +16,7 @@ export function CandidateCard({
   onVideo,
   onDelete,
   onViewQuestions,
+  onViewDetail,
 }) {
   const [expanded, setExpanded] = useState(false)
   const hl = (text) => highlight(text, searchTerm)
@@ -27,12 +28,12 @@ export function CandidateCard({
         selected ? 'border-indigo-400 ring-2 ring-indigo-100' : 'border-gray-200'
       }`}
     >
-      <div className="p-4 flex-1">
+      <div className="p-4 flex-1 cursor-pointer" onClick={() => onViewDetail?.(candidate)}>
         {/* Top row */}
         <div className="flex items-start gap-2.5">
           {/* Checkbox */}
           <button
-            onClick={() => onToggleSelect(candidate.id)}
+            onClick={(e) => { e.stopPropagation(); onToggleSelect(candidate.id) }}
             className={`mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${
               selected ? 'bg-indigo-500 border-indigo-500' : 'border-gray-300 hover:border-indigo-400'
             }`}
@@ -59,14 +60,16 @@ export function CandidateCard({
           </div>
 
           {/* Status */}
-          <StatusDropdown currentStatus={candidate.status} onChange={(s) => onStatusChange(candidate.id, s)} />
+          <div onClick={(e) => e.stopPropagation()}>
+            <StatusDropdown currentStatus={candidate.status} onChange={(s) => onStatusChange(candidate.id, s)} />
+          </div>
         </div>
 
         <RoundPipeline status={candidate.status} />
 
         {/* Skills */}
         <div className="mt-2.5 flex flex-wrap gap-1 ml-7">
-          {candidate.skills.map((skill) => (
+          {(candidate.skills ?? []).map((skill) => (
             <span
               key={skill}
               className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${
@@ -94,7 +97,7 @@ export function CandidateCard({
 
         {hasQuestions && (
           <button
-            onClick={() => onViewQuestions(candidate)}
+            onClick={(e) => { e.stopPropagation(); onViewQuestions(candidate) }}
             className="mt-1.5 ml-7 text-[11px] text-green-600 font-medium hover:text-green-800"
           >
             📋 View questions sent
@@ -102,7 +105,7 @@ export function CandidateCard({
         )}
 
         <button
-          onClick={() => setExpanded(!expanded)}
+          onClick={(e) => { e.stopPropagation(); setExpanded(!expanded) }}
           className="mt-1.5 ml-7 text-[11px] text-indigo-500 font-medium hover:text-indigo-700"
         >
           {expanded ? 'Hide ▲' : 'Details ▼'}

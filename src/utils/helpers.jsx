@@ -27,11 +27,13 @@ export function getVideoLink(id) {
  * @returns {string}
  */
 export function fmtDate(dateStr) {
-  return new Date(dateStr).toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: '2-digit',
-  })
+  if (!dateStr) return '—'
+  // Parse just the date part (YYYY-MM-DD) to avoid timezone shifts
+  const datePart = String(dateStr).split('T')[0]
+  const [y, m, d] = datePart.split('-')
+  const date = new Date(+y, +m - 1, +d)
+  if (isNaN(date)) return '—'
+  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' })
 }
 
 /**

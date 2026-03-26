@@ -1,25 +1,33 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { api } from '../api/client'
 
 export function useQuestionPapers() {
-  const [papers, setPapers] = useState([])
+  const [papers,      setPapers]      = useState([])
   const [submissions, setSubmissions] = useState({})
 
+  // ── Load papers from DB on mount ──────────────────────────────────────────
+  useEffect(() => {
+    api.getPapers()
+      .then((rows) => setPapers(rows))
+      .catch(() => {}) // fail silently — papers stay empty
+  }, [])
+
   const addPaper = (paper) => {
-    setPapers((prev) => [...prev, { ...paper, id: `paper_${Date.now()}` }])
+    const newPaper = { ...paper, id: `paper_${Date.now()}` }
+    setPapers((prev) => [...prev, newPaper])
+    api.createPaper(newPaper).catch(() => {})
   }
 
   const updatePaper = (paperId, patch) => {
     setPapers((prev) => prev.map((p) => (p.id === paperId ? { ...p, ...patch } : p)))
+    api.updatePaper(paperId, patch).catch(() => {})
   }
 
   const deletePaper = (paperId) => {
     setPapers((prev) => prev.filter((p) => p.id !== paperId))
+    api.deletePaper(paperId).catch(() => {})
   }
 
-  /**
-   * Submit a candidate's answers.
-   * correctionMode: 'auto' → MCQs graded immediately, 'manual' → all left for reviewer
-   */
   const submitPaper = (candidateId, paperId, answers, correctionMode = 'auto') => {
     const paper = papers.find((p) => p.id === paperId)
     if (!paper) return
@@ -38,7 +46,6 @@ export function useQuestionPapers() {
         return { questionId: q.id, answer, correct, autoGraded: true, marks: correct ? marks : 0, maxMarks: marks }
       }
 
-      // manual mode OR open-ended → pending review
       return { questionId: q.id, answer, correct: null, autoGraded: false, marks: null, maxMarks: marks }
     })
 
@@ -55,26 +62,23 @@ export function useQuestionPapers() {
           autoScore,
           autoMax,
           totalMax: paper.questions.reduce((s, q) => s + (q.marks ?? 1), 0),
-          manualScores: {}, // { questionId: marks } — filled by reviewer
+          manualScores: {},
         },
       },
     }))
   }
 
-  /**
-   * Reviewer manually sets marks for a question (used in manual correction mode).
-   */
   const manualGrade = (candidateId, paperId, questionId, marks) => {
     setSubmissions((prev) => {
       const sub = prev[candidateId]?.[paperId]
       if (!sub) return prev
       const manualScores = { ...sub.manualScores, [questionId]: marks }
-      const totalManual  = Object.values(manualScores).reduce((s, m) => s + (m ?? 0), 0)
+      const manualTotal  = Object.values(manualScores).reduce((s, m) => s + (m ?? 0), 0)
       return {
         ...prev,
         [candidateId]: {
           ...prev[candidateId],
-          [paperId]: { ...sub, manualScores, manualTotal: totalManual },
+          [paperId]: { ...sub, manualScores, manualTotal },
         },
       }
     })
