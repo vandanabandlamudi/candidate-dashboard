@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { PaperBuilder }     from '../components/papers/PaperBuilder'
-import { PaperDetailView }  from '../components/papers/PaperDetailView'
-import { AssignPaperModal } from '../components/papers/AssignPaperModal'
-import { CandidateTestView } from '../components/papers/CandidateTestView'
-import { IcoTrash }          from '../components/common/Icons'
+import { PaperBuilder }          from '../components/papers/PaperBuilder'
+import { PaperDetailView }       from '../components/papers/PaperDetailView'
+import { AssignPaperModal }      from '../components/papers/AssignPaperModal'
+import { ImportFromDriveModal }  from '../components/papers/ImportFromDriveModal'
+import { IcoTrash }              from '../components/common/Icons'
+import { api }                   from '../api/client'
 
 const ROLE_COLOR = {
   'Senior Frontend Engineer': 'bg-violet-100 text-violet-700',
@@ -12,12 +13,16 @@ const ROLE_COLOR = {
   'DevOps Engineer':          'bg-green-100 text-green-700',
 }
 
-export function QuestionPapersScreen({ papers, candidates, submissions, onAddPaper, onUpdatePaper, onDeletePaper, onSubmit, onManualGrade, onGetSubmission }) {
-  const [selectedId,  setSelectedId]  = useState(null)
-  const [view,        setView]        = useState('list')   // 'list' | 'builder' | 'edit'
-  const [editPaper,   setEditPaper]   = useState(null)
-  const [assignPaper, setAssignPaper] = useState(null)
-  const [testContext, setTestContext] = useState(null)
+export function QuestionPapersScreen({
+  papers, candidates, submissions, pendingTokens = [],
+  onAddPaper, onUpdatePaper, onDeletePaper,
+  onImportFromDrive, importing, importError,
+}) {
+  const [selectedId,    setSelectedId]    = useState(null)
+  const [view,          setView]          = useState('list')   // 'list' | 'builder' | 'edit'
+  const [editPaper,     setEditPaper]     = useState(null)
+  const [assignPaper,   setAssignPaper]   = useState(null)
+  const [showDriveModal, setShowDriveModal] = useState(false)
 
   const selectedPaper = papers.find((p) => p.id === selectedId) ?? null
 
@@ -35,23 +40,6 @@ export function QuestionPapersScreen({ papers, candidates, submissions, onAddPap
     }
     setView('list')
     setEditPaper(null)
-  }
-
-  // ── Full-screen overrides ──────────────────────────────────────────────────
-  if (testContext) {
-    return (
-      <CandidateTestView
-        candidate={testContext.candidate}
-        paper={testContext.paper}
-        submission={onGetSubmission(testContext.candidate.id, testContext.paper.id)}
-        onSubmit={(answers, correctionMode) => {
-          onSubmit(testContext.candidate.id, testContext.paper.id, answers, correctionMode)
-          setTestContext(null)
-        }}
-        onManualGrade={onManualGrade}
-        onClose={() => setTestContext(null)}
-      />
-    )
   }
 
   if (view === 'builder' || view === 'edit') {
@@ -75,12 +63,21 @@ export function QuestionPapersScreen({ papers, candidates, submissions, onAddPap
             <h2 className="text-sm font-bold text-gray-900">Question Papers</h2>
             <p className="text-xs text-gray-400 mt-0.5">{papers.length} paper{papers.length !== 1 ? 's' : ''}</p>
           </div>
-          <button
-            onClick={() => openBuilder()}
-            className="text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 px-2.5 py-1.5 rounded-xl hover:bg-indigo-100 transition-colors"
-          >
-            + New
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setShowDriveModal(true)}
+              className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1.5 rounded-xl hover:bg-emerald-100 transition-colors"
+              title="Import random paper from Google Drive"
+            >
+              Drive
+            </button>
+            <button
+              onClick={() => openBuilder()}
+              className="text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 px-2.5 py-1.5 rounded-xl hover:bg-indigo-100 transition-colors"
+            >
+              + New
+            </button>
+          </div>
         </div>
 
         <div className="overflow-y-auto flex-1">
@@ -95,7 +92,6 @@ export function QuestionPapersScreen({ papers, candidates, submissions, onAddPap
               {papers.map((paper) => {
                 const mcqCount   = paper.questions.filter((q) => q.type === 'mcq').length
                 const openCount  = paper.questions.filter((q) => q.type === 'open').length
-                const subCount   = Object.values(submissions).filter((s) => s[paper.id]).length
                 const isSelected = selectedId === paper.id
 
                 return (
@@ -121,7 +117,6 @@ export function QuestionPapersScreen({ papers, candidates, submissions, onAddPap
                         </span>
                         {mcqCount > 0  && <span className="text-[9px] text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded-full">{mcqCount} MCQ</span>}
                         {openCount > 0 && <span className="text-[9px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">{openCount} Open</span>}
-                        {subCount > 0  && <span className="text-[9px] text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">{subCount} submitted</span>}
                       </div>
                     </button>
                   </li>
@@ -136,11 +131,8 @@ export function QuestionPapersScreen({ papers, candidates, submissions, onAddPap
       {selectedPaper ? (
         <PaperDetailView
           paper={selectedPaper}
-          candidates={candidates}
-          submissions={submissions}
           onEdit={openBuilder}
           onAssign={setAssignPaper}
-          onViewTest={(candidate, paper) => setTestContext({ candidate, paper })}
         />
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
@@ -163,11 +155,28 @@ export function QuestionPapersScreen({ papers, candidates, submissions, onAddPap
           paper={assignPaper}
           candidates={candidates}
           submissions={submissions}
-          onAssign={(candidate) => {
-            setTestContext({ candidate, paper: assignPaper })
-            setAssignPaper(null)
+          pendingTokens={pendingTokens}
+          onGetLink={async (candidate) => {
+            const { token } = await api.assignPaper(assignPaper.id, candidate.id)
+            return { token, url: `${window.location.origin}?token=${token}` }
           }}
           onClose={() => setAssignPaper(null)}
+        />
+      )}
+
+      {/* ── Drive import modal ────────────────────────────────── */}
+      {showDriveModal && (
+        <ImportFromDriveModal
+          importing={importing}
+          error={importError}
+          onImport={async (role) => {
+            const paper = await onImportFromDrive(role)
+            if (paper) {
+              setShowDriveModal(false)
+              setSelectedId(paper.id)
+            }
+          }}
+          onClose={() => setShowDriveModal(false)}
         />
       )}
     </div>

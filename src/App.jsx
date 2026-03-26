@@ -50,7 +50,10 @@ export default function App() {
   // ── Hooks ──────────────────────────────────────────────────────────────────
   const { toastMessage, showToast } = useToast()
   const { questionBank, setQuestionBank } = useQuestionBank()
-  const { papers, addPaper, updatePaper, deletePaper, submitPaper, manualGrade, getSubmission, submissions } = useQuestionPapers()
+  const {
+    papers, addPaper, updatePaper, deletePaper, manualGrade, submissions, pendingTokens, renewToken,
+    importFromDrive, importing, importError,
+  } = useQuestionPapers()
 
   const {
     candidates,
@@ -58,6 +61,7 @@ export default function App() {
     error,
     handleStatusChange,
     handleForward,
+    handleReject,
     handleSchedule,
     handleVideo,
     handleDelete,
@@ -154,7 +158,11 @@ export default function App() {
           {screen === 'jobs' && <JobsScreen />}
 
           {screen === 'assessments' && (
-            <AssessmentsScreen candidates={candidates} onUpdateAssessment={updateAssessment} />
+            <AssessmentsScreen
+              candidates={candidates}
+              onUpdateAssessment={updateAssessment}
+              pendingTokens={pendingTokens}
+            />
           )}
 
           {screen === 'papers' && (
@@ -162,12 +170,13 @@ export default function App() {
               papers={papers}
               candidates={candidates}
               submissions={submissions}
+              pendingTokens={pendingTokens}
               onAddPaper={addPaper}
               onUpdatePaper={updatePaper}
               onDeletePaper={deletePaper}
-              onSubmit={submitPaper}
-              onManualGrade={manualGrade}
-              onGetSubmission={getSubmission}
+              onImportFromDrive={importFromDrive}
+              importing={importing}
+              importError={importError}
             />
           )}
 
@@ -357,9 +366,14 @@ export default function App() {
       {detailC && (
         <CandidateDetailPanel
           candidate={candidates.find((c) => c.id === detailC.id) ?? detailC}
+          submissions={submissions}
+          papers={papers}
+          pendingTokens={pendingTokens}
+          onRenewToken={renewToken}
           onClose={() => setDetailC(null)}
           onStatusChange={handleStatusChange}
           onForward={handleForward}
+          onReject={handleReject}
           onSchedule={setScheduleC}
           onDelete={setDeleteC}
           onViewQuestions={setDrawerC}

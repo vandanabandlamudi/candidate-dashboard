@@ -12,13 +12,19 @@ export function useCandidates(showToast) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  // ── Fetch candidates on mount ──────────────────────────────────────────────
-  useEffect(() => {
+  // ── Fetch candidates on mount + refetch on window focus ───────────────────
+  const fetchCandidates = useCallback(() => {
     api.getCandidates()
       .then((data) => setCandidates(data))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    fetchCandidates()
+    window.addEventListener('focus', fetchCandidates)
+    return () => window.removeEventListener('focus', fetchCandidates)
+  }, [fetchCandidates])
 
   const updateCandidate = useCallback((id, patch) => {
     // Optimistic UI update
@@ -46,6 +52,14 @@ export function useCandidates(showToast) {
       if (!next) return
       updateCandidate(candidate.id, { status: next })
       showToast(`${candidate.name} → ${next}`)
+    },
+    [updateCandidate, showToast]
+  )
+
+  const handleReject = useCallback(
+    (candidate) => {
+      updateCandidate(candidate.id, { status: 'Rejected' })
+      showToast(`${candidate.name} → Rejected`)
     },
     [updateCandidate, showToast]
   )
@@ -129,6 +143,7 @@ export function useCandidates(showToast) {
     error,
     handleStatusChange,
     handleForward,
+    handleReject,
     handleSchedule,
     handleVideo,
     handleDelete,

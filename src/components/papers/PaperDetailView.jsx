@@ -7,21 +7,11 @@ const ROLE_COLOR = {
   'DevOps Engineer':          'bg-green-100 text-green-700',
 }
 
-function resultMeta(pct) {
-  if (pct >= 85) return { label: 'Outstanding', bg: 'bg-green-100',  text: 'text-green-700'  }
-  if (pct >= 70) return { label: 'Strong',      bg: 'bg-lime-100',   text: 'text-lime-700'   }
-  if (pct >= 50) return { label: 'Average',     bg: 'bg-yellow-100', text: 'text-yellow-700' }
-  return              { label: 'Needs Work',  bg: 'bg-red-100',    text: 'text-red-600'    }
-}
 
-export function PaperDetailView({ paper, candidates, submissions, onAssign, onEdit, onViewTest }) {
+export function PaperDetailView({ paper, onAssign, onEdit }) {
   const mcqCount  = paper.questions.filter((q) => q.type === 'mcq').length
   const openCount = paper.questions.filter((q) => q.type === 'open').length
   const totalMarks = paper.questions.reduce((s, q) => s + (q.marks ?? 1), 0)
-
-  const assignedCandidates = candidates.filter(
-    (c) => c.role === paper.role && submissions[c.id]?.[paper.id]
-  )
 
   return (
     <div className="flex-1 overflow-y-auto bg-gray-50">
@@ -113,68 +103,6 @@ export function PaperDetailView({ paper, candidates, submissions, onAssign, onEd
           </div>
         </div>
 
-        {/* Submissions */}
-        {assignedCandidates.length > 0 && (
-          <div>
-            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-3">
-              Submissions · {assignedCandidates.length}
-            </p>
-            <div className="space-y-2">
-              {assignedCandidates.map((c) => {
-                const sub    = submissions[c.id]?.[paper.id]
-                const isAuto = sub?.correctionMode !== 'manual'
-                const score  = isAuto
-                  ? sub?.autoScore
-                  : Object.values(sub?.manualScores ?? {}).reduce((s, m) => s + (m ?? 0), 0)
-                const max  = isAuto ? sub?.autoMax : sub?.totalMax
-                const pct  = sub && max > 0 ? Math.round((score / max) * 100) : null
-                const meta = pct !== null ? resultMeta(pct) : null
-
-                return (
-                  <button
-                    key={c.id}
-                    onClick={() => onViewTest(c, paper)}
-                    className="w-full flex items-center gap-3 bg-white border border-gray-100 rounded-2xl shadow-sm px-4 py-3 hover:border-indigo-200 hover:bg-indigo-50 transition-colors text-left"
-                  >
-                    <span className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center shrink-0">
-                      {c.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-gray-900">{c.name}</p>
-                      <p className="text-[10px] text-gray-400">{c.status} · {c.company}</p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isAuto ? 'bg-indigo-100 text-indigo-600' : 'bg-amber-100 text-amber-700'}`}>
-                        {isAuto ? 'Auto' : 'Manual'}
-                      </span>
-                      {pct !== null ? (
-                        <span className={`text-xs font-bold px-3 py-1 rounded-full ${meta.bg} ${meta.text}`}>
-                          {pct}% · {meta.label}
-                        </span>
-                      ) : (
-                        <span className="text-[10px] text-gray-400">
-                          {Object.keys(sub?.manualScores ?? {}).length}/{sub?.answers.length ?? 0} graded
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {assignedCandidates.length === 0 && (
-          <div className="bg-white border border-dashed border-gray-200 rounded-2xl px-6 py-8 text-center">
-            <p className="text-sm text-gray-400">No submissions yet</p>
-            <button
-              onClick={() => onAssign(paper)}
-              className="mt-3 text-xs font-semibold text-indigo-600 hover:underline"
-            >
-              Assign to a candidate →
-            </button>
-          </div>
-        )}
       </div>
     </div>
   )

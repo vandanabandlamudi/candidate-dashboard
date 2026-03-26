@@ -1,20 +1,33 @@
 import { useState } from 'react'
-import { STATUSES, STATUS_META, FORWARD_MAP } from '../../constants/statuses'
+import { STATUS_META, FORWARD_MAP } from '../../constants/statuses'
 import { StatusDropdown } from '../common/StatusDropdown'
 import { fmtDate } from '../../utils/helpers'
 
 const TABS = ['Profile', 'Interviews', 'Assessments', 'Questions']
 
+function resultMeta(pct) {
+  if (pct >= 85) return { label: 'Outstanding', bg: 'bg-green-100',  text: 'text-green-700'  }
+  if (pct >= 70) return { label: 'Strong',      bg: 'bg-lime-100',   text: 'text-lime-700'   }
+  if (pct >= 50) return { label: 'Average',     bg: 'bg-yellow-100', text: 'text-yellow-700' }
+  return              { label: 'Needs Work',  bg: 'bg-red-100',    text: 'text-red-600'    }
+}
+
 export function CandidateDetailPanel({
   candidate,
+  submissions = {},
+  papers = [],
+  pendingTokens = [],
+  onRenewToken,
   onClose,
   onStatusChange,
   onForward,
+  onReject,
   onSchedule,
   onDelete,
   onViewQuestions,
 }) {
-  const [tab, setTab] = useState('Profile')
+  const [tab,        setTab]        = useState('Profile')
+  const [renewState, setRenewState] = useState({}) // { [paperId]: { loading, url, copied } }
 
   if (!candidate) return null
 
@@ -22,6 +35,16 @@ export function CandidateDetailPanel({
   const initials   = candidate.name.split(' ').map((n) => n[0]).join('').slice(0, 2)
   const nextStatus = FORWARD_MAP[candidate.status]
   const hasQuestions = candidate.sentQuestions?.length > 0
+
+  // For exclusively-MCQ submissions: determine if the button should say "Reject"
+  const candidateSubs = submissions[candidate.id] ?? {}
+  const exclusiveMcqSubs = Object.values(candidateSubs).filter(
+    (sub) => sub.autoMax > 0 && sub.autoMax === sub.totalMax
+  )
+  const bestMcqPct = exclusiveMcqSubs.length > 0
+    ? Math.max(...exclusiveMcqSubs.map((sub) => sub.autoScore / sub.autoMax))
+    : null
+  const showReject = bestMcqPct !== null && bestMcqPct < 0.8
 
   // Pipeline steps in order
   const pipeline = Object.keys(STATUS_META)
@@ -160,6 +183,7 @@ export function CandidateDetailPanel({
                   </div>
                 </section>
               )}
+
             </div>
           )}
 
@@ -210,46 +234,293 @@ export function CandidateDetailPanel({
             </div>
           )}
 
-          {tab === 'Assessments' && (
-            <div>
-              {candidate.assessments?.length > 0 ? (
-                <div className="space-y-3">
-                  {candidate.assessments.map((a) => (
-                    <div key={a.questionId} className="bg-gray-50 rounded-xl p-4">
-                      <p className="text-xs text-gray-500 mb-1">Question ID: {a.questionId}</p>
-                      <p className="text-sm font-semibold text-gray-800">Score: {a.score}</p>
-                      {a.notes && <p className="text-xs text-gray-600 mt-1">{a.notes}</p>}
-                    </div>
-                  ))}
-                </div>
-              ) : (
+          {tab === 'Assessments' && (() => {
+            const sentQuestions  = candidate.sentQuestions ?? []
+            const assessments    = candidate.assessments ?? []
+            const candidateSubs  = submissions[candidate.id] ?? {}
+            const subEntries     = Object.entries(candidateSubs).map(([paperId, sub]) => ({
+              paper: papers.find((p) => p.id === paperId), sub,
+            })).filter((e) => e.paper)
+            const myPending      = pendingTokens.filter((t) => String(t.candidate_id) === String(candidate.id))
+
+            const hasQuestionnaire = sentQuestions.length > 0
+            const hasMcq           = subEntries.length > 0
+            const hasTestPapers    = myPending.length > 0 || subEntries.length > 0
+
+            if (!hasQuestionnaire && !hasTestPapers) {
+              return (
                 <div className="text-center py-10 text-gray-400">
                   <p className="text-3xl mb-2">📊</p>
-                  <p className="text-sm">No assessments recorded yet</p>
+                  <p className="text-sm">No assessments yet</p>
                 </div>
-              )}
-            </div>
-          )}
+              )
+            }
 
-          {tab === 'Questions' && (
-            <div>
-              {hasQuestions ? (
-                <div className="space-y-2">
-                  {candidate.sentQuestions.map((q, i) => (
-                    <div key={q.id ?? i} className="bg-gray-50 rounded-xl p-3 flex gap-3">
-                      <span className="text-xs font-bold text-indigo-400 shrink-0 mt-0.5">Q{i + 1}</span>
-                      <p className="text-sm text-gray-700">{q.text}</p>
+            const handleRenew = async (paperId) => {
+              setRenewState((prev) => ({ ...prev, [paperId]: { loading: true } }))
+              try {
+                const { url } = await onRenewToken(paperId, candidate.id)
+                setRenewState((prev) => ({ ...prev, [paperId]: { loading: false, url, copied: false } }))
+              } catch {
+                setRenewState((prev) => ({ ...prev, [paperId]: { loading: false } }))
+              }
+            }
+
+            const handleCopy = (paperId, url) => {
+              navigator.clipboard.writeText(url)
+              setRenewState((prev) => ({ ...prev, [paperId]: { ...prev[paperId], copied: true } }))
+              setTimeout(() => setRenewState((prev) => ({ ...prev, [paperId]: { ...prev[paperId], copied: false } })), 2000)
+            }
+
+            const SCORE_LABEL = { 5: 'Excellent', 4: 'Good', 3: 'Average', 2: 'Below Avg', 1: 'Poor' }
+            const SCORE_COLOR = {
+              5: 'bg-green-100 text-green-700', 4: 'bg-lime-100 text-lime-700',
+              3: 'bg-yellow-100 text-yellow-700', 2: 'bg-orange-100 text-orange-700',
+              1: 'bg-red-100 text-red-600',
+            }
+
+            return (
+              <div className="space-y-5">
+
+                {/* ── Test Papers section ── */}
+                {hasTestPapers && (
+                  <section>
+                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Test Papers</h3>
+                    <div className="space-y-2">
+                      {myPending.map((t) => {
+                        const rs  = renewState[t.paper_id] ?? {}
+                        const url = rs.url ?? `${window.location.origin}?token=${t.token}`
+                        return (
+                          <div key={t.paper_id} className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <p className="text-xs font-semibold text-gray-900 leading-snug">{t.paper_title}</p>
+                                <p className="text-[10px] text-gray-400 mt-0.5">Sent {fmtDate(t.created_at)}</p>
+                              </div>
+                              <span className="text-[10px] font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full shrink-0">Awaiting</span>
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleCopy(t.paper_id, url)}
+                                className="flex-1 text-[10px] font-semibold text-indigo-600 bg-white border border-indigo-200 px-2 py-1.5 rounded-lg hover:bg-indigo-50 transition-colors"
+                              >
+                                {rs.copied ? '✓ Copied!' : 'Copy link'}
+                              </button>
+                              <button
+                                onClick={() => handleRenew(t.paper_id)}
+                                disabled={rs.loading}
+                                className="flex-1 text-[10px] font-semibold text-white bg-indigo-600 px-2 py-1.5 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-60"
+                              >
+                                {rs.loading ? 'Renewing…' : 'Renew link'}
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                      {subEntries.map(({ paper, sub }) => {
+                        const pct = sub.autoMax > 0 ? Math.round((sub.autoScore / sub.autoMax) * 100) : null
+                        return (
+                          <div key={paper.id} className="bg-green-50 border border-green-200 rounded-xl p-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <p className="text-xs font-semibold text-gray-900 leading-snug">{paper.title}</p>
+                                <p className="text-[10px] text-gray-400 mt-0.5">Submitted {fmtDate(sub.submittedAt)}</p>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="text-[10px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">Submitted</span>
+                                {pct !== null && <span className="text-[10px] font-bold text-gray-700">{pct}%</span>}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-10 text-gray-400">
-                  <p className="text-3xl mb-2">📋</p>
-                  <p className="text-sm">No questions sent yet</p>
-                </div>
-              )}
-            </div>
-          )}
+                  </section>
+                )}
+
+                {/* ── Questionnaire section ── */}
+                {hasQuestionnaire && (
+                  <section>
+                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Questionnaire</h3>
+                    <div className="space-y-2">
+                      {sentQuestions.map((q, i) => {
+                        const a = assessments.find((x) => x.questionId === q.id)
+                        return (
+                          <div key={q.id ?? i} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 space-y-2">
+                            <div className="flex gap-3 items-start">
+                              <span className="text-xs font-bold text-indigo-400 shrink-0 mt-0.5">Q{i + 1}</span>
+                              <p className="text-sm text-gray-800 leading-relaxed flex-1">{q.text}</p>
+                              {a?.score != null && (
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${SCORE_COLOR[a.score] ?? 'bg-gray-100 text-gray-600'}`}>
+                                  {a.score}/5 · {SCORE_LABEL[a.score]}
+                                </span>
+                              )}
+                              {a?.score == null && (
+                                <span className="text-[10px] text-gray-300 shrink-0">Not scored</span>
+                              )}
+                            </div>
+                            {a?.notes && (
+                              <p className="text-xs text-gray-500 pl-6 italic">{a.notes}</p>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </section>
+                )}
+
+                {/* ── MCQ test results section ── */}
+                {hasMcq && (
+                  <section>
+                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">MCQ Tests</h3>
+                    <div className="space-y-3">
+                      {subEntries.map(({ paper, sub }) => {
+                        const pct     = sub.autoMax > 0 ? Math.round((sub.autoScore / sub.autoMax) * 100) : null
+                        const meta    = pct !== null ? resultMeta(pct) : null
+                        const correct = sub.answers.filter((a) => a.autoGraded && a.correct).length
+                        const wrong   = sub.answers.filter((a) => a.autoGraded && !a.correct).length
+
+                        return (
+                          <div key={paper.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <p className="text-sm font-semibold text-gray-900">{paper.title}</p>
+                                <p className="text-[10px] text-gray-400 mt-0.5">{fmtDate(sub.submittedAt)}</p>
+                              </div>
+                              {pct !== null && meta && (
+                                <span className={`text-xs font-bold px-3 py-1 rounded-full shrink-0 ${meta.bg} ${meta.text}`}>
+                                  {pct}% · {meta.label}
+                                </span>
+                              )}
+                            </div>
+                            {pct !== null && (
+                              <div>
+                                <div className="flex justify-between text-[10px] text-gray-400 mb-1">
+                                  <span>{sub.autoScore} / {sub.autoMax} marks</span>
+                                  <span>{sub.answers.length} questions</span>
+                                </div>
+                                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full ${pct >= 70 ? 'bg-green-500' : pct >= 50 ? 'bg-yellow-400' : 'bg-red-500'}`}
+                                    style={{ width: `${pct}%` }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                            <div className="flex gap-3">
+                              <span className="text-xs text-gray-600">✅ <span className="font-semibold text-green-700">{correct}</span> correct</span>
+                              <span className="text-xs text-gray-600">❌ <span className="font-semibold text-red-600">{wrong}</span> wrong</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              {sub.answers.map((a, i) => (
+                                <span
+                                  key={a.questionId}
+                                  title={`Q${i + 1}`}
+                                  className={`w-5 h-5 rounded text-[9px] font-bold flex items-center justify-center ${
+                                    !a.autoGraded ? 'bg-gray-100 text-gray-400'
+                                    : a.correct    ? 'bg-green-100 text-green-700'
+                                    :                'bg-red-100 text-red-600'
+                                  }`}
+                                >
+                                  {i + 1}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </section>
+                )}
+
+              </div>
+            )
+          })()}
+
+          {tab === 'Questions' && (() => {
+            const subEntries = Object.entries(submissions[candidate.id] ?? {})
+              .map(([paperId, sub]) => ({ paper: papers.find((p) => p.id === paperId), sub }))
+              .filter((e) => e.paper)
+            const hasAnything = hasQuestions || subEntries.length > 0
+
+            if (!hasAnything) return (
+              <div className="text-center py-10 text-gray-400">
+                <p className="text-3xl mb-2">📋</p>
+                <p className="text-sm">No questions sent yet</p>
+              </div>
+            )
+
+            return (
+              <div className="space-y-6">
+                {/* ── MCQ submissions ── */}
+                {subEntries.map(({ paper, sub }) => (
+                  <section key={paper.id}>
+                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+                      {paper.title}
+                    </h3>
+                    <div className="space-y-3">
+                      {paper.questions.map((q, i) => {
+                        const ans = sub.answers.find((a) => String(a.questionId) === String(q.id))
+                        const chosen = ans?.answer ?? null
+                        return (
+                          <div key={q.id ?? i} className="bg-white border border-gray-100 rounded-xl p-3 space-y-2 shadow-sm">
+                            <div className="flex gap-2 items-start">
+                              <span className="text-xs font-bold text-indigo-400 shrink-0 mt-0.5">Q{i + 1}</span>
+                              <p className="text-sm text-gray-800 flex-1">{q.text}</p>
+                              {ans?.autoGraded && (
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${ans.correct ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                                  {ans.correct ? 'Correct' : 'Wrong'}
+                                </span>
+                              )}
+                            </div>
+                            {q.options && (
+                              <div className="pl-6 grid grid-cols-1 gap-1">
+                                {q.options.map((opt, oi) => {
+                                  const isChosen  = chosen === oi
+                                  const isCorrect = q.correctOption === oi
+                                  return (
+                                    <div
+                                      key={oi}
+                                      className={`flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-lg ${
+                                        isChosen && isCorrect ? 'bg-green-100 text-green-800 font-medium'
+                                        : isChosen            ? 'bg-red-100 text-red-700 font-medium'
+                                        : isCorrect           ? 'bg-green-50 text-green-700'
+                                        :                       'text-gray-500'
+                                      }`}
+                                    >
+                                      <span className="font-bold shrink-0">{String.fromCharCode(65 + oi)}.</span>
+                                      <span>{opt}</span>
+                                      {isChosen  && <span className="ml-auto text-[10px]">{isCorrect ? '✓ chosen' : '✗ chosen'}</span>}
+                                      {!isChosen && isCorrect && <span className="ml-auto text-[10px] text-green-600">correct</span>}
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </section>
+                ))}
+
+                {/* ── Sent questionnaire ── */}
+                {hasQuestions && (
+                  <section>
+                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Questionnaire</h3>
+                    <div className="space-y-2">
+                      {candidate.sentQuestions.map((q, i) => (
+                        <div key={q.id ?? i} className="bg-gray-50 rounded-xl p-3 flex gap-3">
+                          <span className="text-xs font-bold text-indigo-400 shrink-0 mt-0.5">Q{i + 1}</span>
+                          <p className="text-sm text-gray-700">{q.text}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+              </div>
+            )
+          })()}
         </div>
 
         {/* ── Footer actions ── */}
@@ -261,13 +532,22 @@ export function CandidateDetailPanel({
             Archive candidate
           </button>
           <div className="flex gap-2">
-            {nextStatus && (
+            {showReject ? (
               <button
-                onClick={() => { onForward(candidate); onClose() }}
-                className="text-xs bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700"
+                onClick={() => { onReject(candidate); onClose() }}
+                className="text-xs font-semibold px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
               >
-                Move to {nextStatus} →
+                Reject
               </button>
+            ) : (
+              nextStatus && (
+                <button
+                  onClick={() => { onForward(candidate); onClose() }}
+                  className="text-xs bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+                >
+                  Move to {nextStatus} →
+                </button>
+              )
             )}
           </div>
         </div>

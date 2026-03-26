@@ -2,14 +2,45 @@ import { useState, useEffect } from 'react'
 import { api } from '../api/client'
 
 export function useQuestionPapers() {
-  const [papers,      setPapers]      = useState([])
-  const [submissions, setSubmissions] = useState({})
+  const [papers,        setPapers]        = useState([])
+  const [submissions,   setSubmissions]   = useState({})
+  const [pendingTokens, setPendingTokens] = useState([])
 
-  // ── Load papers from DB on mount ──────────────────────────────────────────
+  // ── Load papers and submissions from DB on mount ──────────────────────────
   useEffect(() => {
     api.getPapers()
       .then((rows) => setPapers(rows))
-      .catch(() => {}) // fail silently — papers stay empty
+      .catch(() => {})
+    api.getAllSubmissions()
+      .then((rows) => {
+        const map = {}
+        for (const s of rows) {
+          if (!map[s.candidate_id]) map[s.candidate_id] = {}
+          map[s.candidate_id][s.paper_id] = {
+            paperId:        s.paper_id,
+            candidateId:    s.candidate_id,
+            correctionMode: s.correction_mode,
+            submittedAt:    s.submitted_at,
+            autoScore:      s.auto_score,
+            autoMax:        s.auto_max,
+            totalMax:       s.total_max,
+            manualScores:   {},
+            answers: s.answers.map((a) => ({
+              questionId:  a.question_id,
+              answer:      a.answer !== null ? (isNaN(Number(a.answer)) ? a.answer : Number(a.answer)) : null,
+              correct:     a.correct,
+              autoGraded:  a.auto_graded,
+              marks:       a.marks,
+              maxMarks:    a.max_marks,
+            })),
+          }
+        }
+        setSubmissions(map)
+      })
+      .catch(() => {})
+    api.getPendingTokens()
+      .then((rows) => setPendingTokens(rows))
+      .catch(() => {})
   }, [])
 
   const addPaper = (paper) => {
@@ -86,5 +117,38 @@ export function useQuestionPapers() {
 
   const getSubmission = (candidateId, paperId) => submissions[candidateId]?.[paperId] ?? null
 
-  return { papers, addPaper, updatePaper, deletePaper, submitPaper, manualGrade, getSubmission, submissions }
+  // ── Drive import ───────────────────────────────────────────────────────────
+  const [importing,   setImporting]   = useState(false)
+  const [importError, setImportError] = useState(null)
+
+  const importFromDrive = async (role) => {
+    setImporting(true)
+    setImportError(null)
+    try {
+      const paper = await api.importPaperFromDrive(role)
+      setPapers((prev) => [paper, ...prev])
+      return paper
+    } catch (err) {
+      setImportError(err.message)
+      return null
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  const renewToken = async (paperId, candidateId) => {
+    const { token } = await api.assignPaper(paperId, candidateId)
+    setPendingTokens((prev) => {
+      const old = prev.find((t) => String(t.candidate_id) === String(candidateId) && t.paper_id === paperId)
+      const rest = prev.filter((t) => !(String(t.candidate_id) === String(candidateId) && t.paper_id === paperId))
+      return [{ ...old, token, created_at: new Date().toISOString() }, ...rest]
+    })
+    return { token, url: `${window.location.origin}?token=${token}` }
+  }
+
+  return {
+    papers, addPaper, updatePaper, deletePaper, submitPaper, manualGrade, getSubmission,
+    submissions, pendingTokens, renewToken,
+    importFromDrive, importing, importError,
+  }
 }

@@ -25,7 +25,9 @@ export const api = {
   createInterview: (id, data)   => request(`/api/candidates/${id}/interviews`, { method: 'POST', body: JSON.stringify(data) }),
 
   // Submissions
-  getSubmissions:  (id)         => request(`/api/candidates/${id}/submissions`),
+  getSubmissions:      (id) => request(`/api/candidates/${id}/submissions`),
+  getAllSubmissions:    ()   => request('/api/submissions'),
+  getPendingTokens:    ()   => request('/api/tokens/pending'),
 
   // Roles & Statuses
   getRoles:        ()           => request('/api/roles'),
@@ -39,4 +41,16 @@ export const api = {
   createPaper:     (data)       => request('/api/papers', { method: 'POST', body: JSON.stringify(data) }),
   updatePaper:     (id, patch)  => request(`/api/papers/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
   deletePaper:     (id)         => request(`/api/papers/${id}`, { method: 'DELETE' }),
+
+  // Google Drive import
+  importPaperFromDrive: (role) =>
+    request('/api/papers/import-from-drive', { method: 'POST', body: JSON.stringify({ role }) }),
+
+  // Assign paper → shareable token
+  assignPaper: (paperId, candidateId) =>
+    request(`/api/papers/${paperId}/assign`, { method: 'POST', body: JSON.stringify({ candidateId }) }),
+
+  // Public test endpoints (used by TestPage)
+  getTest:    (token)       => request(`/api/test/${token}`),
+  submitTest: (token, data) => request(`/api/test/${token}/submit`, { method: 'POST', body: JSON.stringify(data) }),
 }
