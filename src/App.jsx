@@ -80,6 +80,7 @@ export default function App() {
     currentPage, setCurrentPage,
     perPage, setPerPage,
     filtered, paginated, totalPages,
+    rolesFilter,
     hasActiveFilters, clearAllFilters, resetPage,
   } = useFilters(candidates)
 
@@ -212,6 +213,7 @@ export default function App() {
               {/* Filters */}
               <div className="py-2">
               <FilterPanel
+                roles={rolesFilter}
                 selectedRole={selectedRole}     onRoleChange={(v)   => { setSelectedRole(v);   resetPage(); clearSelection() }}
                 selectedStatus={selectedStatus} onStatusChange={(v) => { setSelectedStatus(v); resetPage(); clearSelection() }}
                 keyword={keyword}               onKeywordChange={(v) => { setKeyword(v);        resetPage(); clearSelection() }}

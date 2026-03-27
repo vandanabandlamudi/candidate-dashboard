@@ -60,8 +60,7 @@ export function QuestionPapersScreen({
       <div className="w-72 shrink-0 border-r border-gray-200 bg-white flex flex-col">
         <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold text-gray-900">Question Papers</h2>
-            <p className="text-xs text-gray-400 mt-0.5">{papers.length} paper{papers.length !== 1 ? 's' : ''}</p>
+            <p className="text-xs text-gray-400">{papers.length} paper{papers.length !== 1 ? 's' : ''}</p>
           </div>
           <div className="flex items-center gap-1.5">
             <button

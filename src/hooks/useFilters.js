@@ -71,6 +71,11 @@ export function useFilters(candidates) {
   const totalPages = Math.ceil(filtered.length / perPage)
   const paginated  = filtered.slice((currentPage - 1) * perPage, currentPage * perPage)
 
+  const rolesFilter = useMemo(() => {
+    const unique = [...new Set(candidates.map((c) => c.role).filter(Boolean))].sort()
+    return ['All Roles', ...unique]
+  }, [candidates])
+
   const hasActiveFilters =
     globalSearch || selectedRole !== 'All Roles' || selectedStatus !== 'All Statuses' || keyword
 
@@ -83,6 +88,7 @@ export function useFilters(candidates) {
     currentPage, setCurrentPage,
     perPage, setPerPage,
     filtered, paginated, totalPages,
+    rolesFilter,
     hasActiveFilters, clearAllFilters, resetPage,
   }
 }

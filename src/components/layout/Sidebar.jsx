@@ -51,8 +51,8 @@ export function Sidebar({ screen, onScreenChange, onManageQuestions }) {
     <aside className="w-56 shrink-0 bg-white border-r border-gray-200 flex flex-col h-screen sticky top-0">
       {/* Logo */}
       <div className="px-5 py-5 border-b border-gray-100">
-        <h1 className="text-base font-bold text-gray-900">Hiring</h1>
-        <p className="text-[10px] text-gray-400 mt-0.5">Candidate Dashboard</p>
+        <h1 className="text-base font-bold text-gray-900">AI-Powered Resume Screening</h1>
+        {/* <p className="text-[10px] text-gray-400 mt-0.5">Candidate Dashboard</p> */}
       </div>
 
       {/* Nav */}

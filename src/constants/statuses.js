@@ -26,14 +26,6 @@ export const STATUS_META = {
   Reject:            { bg: 'bg-red-100',    text: 'text-red-700',    dot: 'bg-red-400',    border: 'border-red-300',    label: 'Reject',          order: 7 },
 }
 
-export const ALL_ROLES_FILTER = [
-  'All Roles',
-  'Senior Frontend Engineer',
-  'Product Manager',
-  'Data Scientist',
-  'DevOps Engineer',
-]
-
 export const ALL_STATUSES_FILTER = ['All Statuses', ...STATUSES]
 
 export const PER_PAGE_OPTIONS = [15, 25, 50]

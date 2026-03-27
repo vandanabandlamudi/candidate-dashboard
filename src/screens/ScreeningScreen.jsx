@@ -10,12 +10,6 @@ const VERDICT_STYLES = {
   'Not a Match':   { bar: 'bg-red-400',    badge: 'bg-red-50 text-red-600 border-red-200',        border: 'border-red-200'   },
 }
 
-const MOCK_JOBS = {
-  'Senior Frontend Engineer': { job_title: 'Senior Frontend Engineer', department: 'Frontend Engineering', experience_from: '4', experience_to: '8', salary_min: '1800000', salary_max: '2800000', employee_type: 'Full Time', is_remote: 0 },
-  'Product Manager':          { job_title: 'Product Manager',          department: 'Product Management',   experience_from: '3', experience_to: '7', salary_min: '2000000', salary_max: '3200000', employee_type: 'Full Time', is_remote: 0 },
-  'Data Scientist':           { job_title: 'Data Scientist',           department: 'Data Science',         experience_from: '2', experience_to: '5', salary_min: '1500000', salary_max: '2500000', employee_type: 'Full Time', is_remote: 1 },
-  'DevOps Engineer':          { job_title: 'DevOps Engineer',          department: 'DevOps & SRE',         experience_from: '3', experience_to: '6', salary_min: '1600000', salary_max: '2400000', employee_type: 'Full Time', is_remote: 0 },
-}
 
 function CandidateResult({ r, selected, onToggle }) {
   const style = VERDICT_STYLES[r.verdict] || VERDICT_STYLES['Partial Match']
@@ -94,6 +88,19 @@ export function ScreeningScreen({ candidates, onStatusChange }) {
   const [moving,     setMoving]     = useState(false)
   const [saving,     setSaving]     = useState(false)
   const [verdictFilter, setVerdictFilter] = useState('All')
+  const [jobsMap,    setJobsMap]    = useState({})
+
+  // Fetch real job data on mount — keyed by job_title for quick lookup
+  useEffect(() => {
+    fetch(`${BASE}/api/jobs`)
+      .then((r) => r.json())
+      .then((jobs) => {
+        const map = {}
+        jobs.forEach((j) => { map[j.job_title] = j })
+        setJobsMap(map)
+      })
+      .catch(() => {})
+  }, [])
 
   // Build a status lookup from candidates prop
   const statusById = Object.fromEntries(candidates.map((c) => [c.id, c.status]))
@@ -140,7 +147,7 @@ export function ScreeningScreen({ candidates, onStatusChange }) {
     return Promise.all(
       rolesToScreen.map(async (role) => {
         const roleCandidates = candidates.filter((c) => c.role === role)
-        const job = MOCK_JOBS[role] || { job_title: role, department: role, experience_from: '0', experience_to: '∞', salary_min: null, salary_max: null, employee_type: 'Full Time', is_remote: 0 }
+        const job = jobsMap[role] || { job_title: role, department: role, experience_from: '0', experience_to: '∞', salary_min: null, salary_max: null, employee_type: 'Full Time', is_remote: 0 }
         const res = await fetch(`${BASE}/api/screen`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -257,16 +264,20 @@ export function ScreeningScreen({ candidates, onStatusChange }) {
   }
 
 
-  const roles = Object.keys(results)
+  // All unique roles across both screened results and unscreened candidates
+  const screenedRoles = Object.keys(results)
+  const allRoles = [...new Set([...screenedRoles, ...candidates.map((c) => c.role)])]
+  const roles = allRoles
+
   const activeResults = activeTab === null
     ? Object.values(results).flat()
     : results[activeTab] || []
 
   // Candidates who have no screening result yet for the active tab/role
-  const screenedIds = new Set(activeResults.map((r) => r.id))
+  const allScreenedIds = new Set(Object.values(results).flat().map((r) => r.id))
   const notShortlisted = candidates.filter((c) => {
     if (activeTab !== null && c.role !== activeTab) return false
-    return !screenedIds.has(c.id)
+    return !allScreenedIds.has(c.id)
   })
 
   const verdictCounts = activeResults.reduce((acc, r) => { acc[r.verdict] = (acc[r.verdict] || 0) + 1; return acc }, {})
@@ -281,11 +292,7 @@ export function ScreeningScreen({ candidates, onStatusChange }) {
       {/* ── Header ── */}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-indigo-600 text-lg">✦</span>
-            <h2 className="text-base font-bold text-gray-900">Shortlisting Candidates</h2>
-          </div>
-          <p className="text-xs text-gray-400 mt-0.5">Shortlist candidates against their respective job roles using AI</p>
+          <p className="text-xs text-gray-400">Shortlist candidates against their respective job roles using AI</p>
         </div>
         <button
           onClick={runScreening}
@@ -382,37 +389,93 @@ export function ScreeningScreen({ candidates, onStatusChange }) {
             >
               All
               <span className={`ml-2 text-[10px] font-bold ${activeTab === null ? 'text-indigo-200' : 'text-gray-400'}`}>
-                {Object.values(results).flat().length}
+                {candidates.length}
               </span>
             </button>
-            {roles.map((role) => (
-              <div key={role} className="flex items-center gap-1">
-                <button
-                  onClick={() => { setActiveTab(role); setVerdictFilter('All') }}
-                  className={`whitespace-nowrap text-xs font-medium px-4 py-2 rounded-xl transition-colors ${
-                    activeTab === role ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-600 hover:border-indigo-300'
-                  }`}
-                >
-                  {role}
-                  <span className={`ml-2 text-[10px] font-bold ${activeTab === role ? 'text-indigo-200' : 'text-gray-400'}`}>
-                    {results[role]?.length}
-                  </span>
-                </button>
-                <button
-                  onClick={() => runScreeningForRole(role)}
-                  disabled={roleLoading === role || loading}
-                  title={`Re-shortlist ${role}`}
-                  className="text-[10px] font-semibold px-2 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {roleLoading === role ? (
-                    <div className="w-3 h-3 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" />
-                  ) : '↺'}
-                </button>
-              </div>
-            ))}
+            {roles.map((role) => {
+              const roleTotal = candidates.filter((c) => c.role === role).length
+              const isScreened = !!results[role]
+              return (
+                <div key={role} className="flex items-center gap-1">
+                  <button
+                    onClick={() => { setActiveTab(role); setVerdictFilter('All') }}
+                    className={`whitespace-nowrap text-xs font-medium px-4 py-2 rounded-xl transition-colors ${
+                      activeTab === role ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-600 hover:border-indigo-300'
+                    }`}
+                  >
+                    {role}
+                    <span className={`ml-2 text-[10px] font-bold ${activeTab === role ? 'text-indigo-200' : 'text-gray-400'}`}>
+                      {roleTotal}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => runScreeningForRole(role)}
+                    disabled={roleLoading === role || loading}
+                    title={isScreened ? `Re-shortlist ${role}` : `Shortlist ${role}`}
+                    className="text-[10px] font-semibold px-2 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {roleLoading === role ? (
+                      <div className="w-3 h-3 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" />
+                    ) : isScreened ? '↺' : '✦'}
+                  </button>
+                </div>
+              )
+            })}
           </div>
 
-          {/* Toolbar */}
+          {/* Not yet shortlisted — above results, grouped by role */}
+          {notShortlisted.length > 0 && verdictFilter === 'All' && (() => {
+            const unscreenedRoles = [...new Set(notShortlisted.map((c) => c.role))]
+            return (
+              <div className="space-y-4">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Not Yet Shortlisted</p>
+                {unscreenedRoles.map((role) => {
+                  const group = notShortlisted.filter((c) => c.role === role)
+                  return (
+                    <div key={role} className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+                      <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 bg-gray-50">
+                        <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">{role}</p>
+                        <span className="text-[10px] font-bold text-gray-400 bg-gray-200 px-2 py-0.5 rounded-full">{group.length}</span>
+                        <div className="flex-1" />
+                        <button
+                          onClick={() => runScreeningForRole(role)}
+                          disabled={roleLoading !== null || loading}
+                          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors disabled:opacity-50 shrink-0"
+                        >
+                          {roleLoading === role ? (
+                            <><div className="w-3 h-3 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" />Shortlisting…</>
+                          ) : <>✦ Shortlist</>}
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-gray-100">
+                        {group.map((c) => (
+                          <div key={c.id} className="flex items-center gap-3 px-4 py-3 bg-white">
+                            <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 text-xs font-bold flex items-center justify-center shrink-0">
+                              {c.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-semibold text-gray-700 truncate">{c.name}</p>
+                              <p className="text-[10px] text-gray-400 truncate">{c.title} · {c.company}</p>
+                            </div>
+                            <span className="text-[10px] font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full shrink-0">{c.exp}y</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+                {/* Divider before screened results */}
+                {visibleResults.length > 0 && (
+                  <div className="flex items-center gap-3 pt-2">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Shortlisted</p>
+                    <div className="h-px flex-1 bg-gray-200" />
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+
+          {/* Toolbar — select all + verdict filters, above shortlisted cards */}
           {activeResults.length > 0 && (
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-3 flex-wrap">
@@ -473,57 +536,6 @@ export function ScreeningScreen({ candidates, onStatusChange }) {
               )}
             </div>
           )}
-
-          {/* Not yet shortlisted — above results, grouped by role */}
-          {notShortlisted.length > 0 && verdictFilter === 'All' && (() => {
-            const unscreenedRoles = [...new Set(notShortlisted.map((c) => c.role))]
-            return (
-              <div className="space-y-4">
-                {unscreenedRoles.map((role) => {
-                  const group = notShortlisted.filter((c) => c.role === role)
-                  return (
-                    <div key={role} className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-                      <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 bg-gray-50">
-                        <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">{role}</p>
-                        <span className="text-[10px] font-bold text-gray-400 bg-gray-200 px-2 py-0.5 rounded-full">{group.length}</span>
-                        <div className="flex-1" />
-                        <button
-                          onClick={() => runScreeningForRole(role)}
-                          disabled={roleLoading !== null || loading}
-                          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors disabled:opacity-50 shrink-0"
-                        >
-                          {roleLoading === role ? (
-                            <><div className="w-3 h-3 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" />Shortlisting…</>
-                          ) : <>✦ Shortlist</>}
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-gray-100">
-                        {group.map((c) => (
-                          <div key={c.id} className="flex items-center gap-3 px-4 py-3 bg-white">
-                            <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 text-xs font-bold flex items-center justify-center shrink-0">
-                              {c.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-semibold text-gray-700 truncate">{c.name}</p>
-                              <p className="text-[10px] text-gray-400 truncate">{c.title} · {c.company}</p>
-                            </div>
-                            <span className="text-[10px] font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full shrink-0">{c.exp}y</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )
-                })}
-                {/* Divider before screened results */}
-                {visibleResults.length > 0 && (
-                  <div className="flex items-center gap-3 pt-2">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Shortlisted</p>
-                    <div className="h-px flex-1 bg-gray-200" />
-                  </div>
-                )}
-              </div>
-            )
-          })()}
 
           {/* Cards grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

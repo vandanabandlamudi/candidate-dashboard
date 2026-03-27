@@ -4,6 +4,8 @@ const SCREEN_TITLE = {
   hiring:      'Candidates',
   assessments: 'Assessments',
   papers:      'Question Papers',
+  screening:   'Shortlisting',
+  jobs:        'Job Listings',
 }
 
 export function Header({ screen, globalSearch, onGlobalSearch, viewMode, onViewModeChange }) {

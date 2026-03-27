@@ -44,8 +44,7 @@ export function AssessmentsScreen({ candidates, onUpdateAssessment, pendingToken
       {/* ── Left panel ───────────────────────────────────────── */}
       <div className="w-80 shrink-0 border-r border-gray-200 bg-white flex flex-col">
         <div className="px-4 py-3 border-b border-gray-100">
-          <h2 className="text-sm font-bold text-gray-900">Assessments</h2>
-          <div className="mt-2 flex gap-1 bg-gray-100 rounded-lg p-0.5">
+          <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
             <button
               onClick={() => switchTab('questionnaire')}
               className={`flex-1 text-[10px] font-semibold px-2 py-1 rounded-md transition-colors ${

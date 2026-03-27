@@ -61,35 +61,36 @@ export function ScreeningModal({ candidates, onClose }) {
 
   useEffect(() => {
     const roles = [...new Set(candidates.map((c) => c.role))]
-
-    const mockJobs = {
-      'Senior Frontend Engineer': { job_title: 'Senior Frontend Engineer', department: 'Frontend Engineering', experience_from: '4', experience_to: '8', salary_min: '1800000', salary_max: '2800000', employee_type: 'Full Time', is_remote: 0 },
-      'Product Manager':          { job_title: 'Product Manager',          department: 'Product Management',   experience_from: '3', experience_to: '7', salary_min: '2000000', salary_max: '3200000', employee_type: 'Full Time', is_remote: 0 },
-      'Data Scientist':           { job_title: 'Data Scientist',           department: 'Data Science',         experience_from: '2', experience_to: '5', salary_min: '1500000', salary_max: '2500000', employee_type: 'Full Time', is_remote: 1 },
-      'DevOps Engineer':          { job_title: 'DevOps Engineer',          department: 'DevOps & SRE',         experience_from: '3', experience_to: '6', salary_min: '1600000', salary_max: '2400000', employee_type: 'Full Time', is_remote: 0 },
-    }
-
     setActiveTab(roles[0])
 
-    Promise.all(
-      roles.map(async (role) => {
-        const roleCandidates = candidates.filter((c) => c.role === role)
-        const job = mockJobs[role] || { job_title: role, department: role, experience_from: '0', experience_to: '∞', salary_min: null, salary_max: null, employee_type: 'Full Time', is_remote: 0 }
-        const res = await fetch(`${BASE}/api/screen`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ job, candidates: roleCandidates }),
+    const run = async () => {
+      let jobsMap = {}
+      try {
+        const jobsRes = await fetch(`${BASE}/api/jobs`)
+        const jobs = await jobsRes.json()
+        jobs.forEach((j) => { jobsMap[j.job_title] = j })
+      } catch (_) {}
+
+      const all = await Promise.all(
+        roles.map(async (role) => {
+          const roleCandidates = candidates.filter((c) => c.role === role)
+          const job = jobsMap[role] || { job_title: role, department: role, experience_from: '0', experience_to: '∞', salary_min: null, salary_max: null, employee_type: 'Full Time', is_remote: 0 }
+          const res = await fetch(`${BASE}/api/screen`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ job, candidates: roleCandidates }),
+          })
+          const data = await res.json()
+          if (!res.ok) throw new Error(data.error || 'shortlisting failed')
+          return { role, data }
         })
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.error || 'shortlisting failed')
-        return { role, data }
-      })
-    )
-      .then((all) => {
-        const map = {}
-        all.forEach(({ role, data }) => { map[role] = data })
-        setResults(map)
-      })
+      )
+      const map = {}
+      all.forEach(({ role, data }) => { map[role] = data })
+      setResults(map)
+    }
+
+    run()
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
   }, [])

@@ -1,6 +1,7 @@
-import { ALL_ROLES_FILTER, ALL_STATUSES_FILTER } from '../../constants/statuses'
+import { ALL_STATUSES_FILTER } from '../../constants/statuses'
 
 export function FilterPanel({
+  roles,
   selectedRole, onRoleChange,
   selectedStatus, onStatusChange,
   keyword, onKeywordChange,
@@ -16,7 +17,7 @@ export function FilterPanel({
           onChange={(e) => onRoleChange(e.target.value)}
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-300"
         >
-          {ALL_ROLES_FILTER.map((r) => <option key={r}>{r}</option>)}
+          {roles.map((r) => <option key={r}>{r}</option>)}
         </select>
       </div>
 

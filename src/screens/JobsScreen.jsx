@@ -332,10 +332,7 @@ export function JobsScreen({ candidates = [] }) {
   return (
     <div className="max-w-7xl mx-auto px-6 py-5 space-y-4">
       {/* Top bar */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900">Job Listings</h2>
-        </div>
+      <div className="flex items-center justify-end gap-4 flex-wrap">
         <button
           onClick={refetch}
           disabled={loading}

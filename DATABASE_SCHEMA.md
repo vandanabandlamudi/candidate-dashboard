@@ -29,7 +29,7 @@
 | order | INT | Pipeline order (0–5) |
 | next_status_id | INT | FK → statuses.id (pipeline progression) |
 
-**Values:** Screening → Interview R1 → Interview R2 → Interview R3 → Offer / Reject
+**Values:** Shortlist → Screen → Interview R1 → Interview R2 → Interview R3 → Offer / Reject
 
 ---
 
