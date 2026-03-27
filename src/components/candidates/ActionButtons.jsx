@@ -1,24 +1,8 @@
-import { FORWARD_MAP, STATUS_META } from '../../constants/statuses'
-import { IcoForward, IcoCal, IcoVideo, IcoTrash } from '../common/Icons'
+import { IcoCal, IcoVideo, IcoTrash } from '../common/Icons'
 
-export function ActionButtons({ candidate, onForward, onSchedule, onVideo, onDelete }) {
-  const nextStage = FORWARD_MAP[candidate.status]
-
+export function ActionButtons({ candidate, onSchedule, onVideo, onDelete }) {
   return (
     <div className="flex items-center gap-1">
-      <button
-        onClick={() => onForward(candidate)}
-        disabled={!nextStage}
-        title={nextStage ? `Move to ${STATUS_META[nextStage]?.label}` : 'No next stage'}
-        className={`p-1.5 rounded-lg transition-colors ${
-          nextStage
-            ? 'text-gray-500 hover:bg-indigo-50 hover:text-indigo-600'
-            : 'text-gray-200 cursor-not-allowed'
-        }`}
-      >
-        <IcoForward />
-      </button>
-
       <button
         onClick={() => onSchedule(candidate)}
         title="Schedule interview"

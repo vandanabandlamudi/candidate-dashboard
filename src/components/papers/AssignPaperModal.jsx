@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 export function AssignPaperModal({ paper, candidates, submissions, pendingTokens = [], onGetLink, onClose }) {
-  const eligible = candidates.filter((c) => c.role === paper.role && c.status === 'Interview R1')
+  const eligible = candidates.filter((c) => c.role === paper.role && c.status === 'Screen')
   const [linkInfo,    setLinkInfo]    = useState(null)   // { candidateName, url }
   const [generating,  setGenerating]  = useState(false)
   const [genError,    setGenError]    = useState('')
@@ -81,7 +81,7 @@ export function AssignPaperModal({ paper, candidates, submissions, pendingTokens
                 <p className="text-xs text-red-500 bg-red-50 rounded-xl px-3 py-2">{genError}</p>
               )}
               {eligible.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-8">No candidates in Interview R1 for this role.</p>
+                <p className="text-sm text-gray-400 text-center py-8">No candidates in Screen for this role.</p>
               ) : (
                 eligible.map((c) => {
                   const submitted = !!submissions[c.id]?.[paper.id]

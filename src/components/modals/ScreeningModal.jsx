@@ -81,7 +81,7 @@ export function ScreeningModal({ candidates, onClose }) {
           body: JSON.stringify({ job, candidates: roleCandidates }),
         })
         const data = await res.json()
-        if (!res.ok) throw new Error(data.error || 'Screening failed')
+        if (!res.ok) throw new Error(data.error || 'shortlisting failed')
         return { role, data }
       })
     )
@@ -106,9 +106,9 @@ export function ScreeningModal({ candidates, onClose }) {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-indigo-600 text-base">✦</span>
-              <h2 className="text-base font-bold text-gray-900">AI Candidate Screening</h2>
+              <h2 className="text-base font-bold text-gray-900">Shortlisting Candidates</h2>
             </div>
-            <p className="text-xs text-gray-500 mt-0.5">All candidates screened against their respective job roles</p>
+            <p className="text-xs text-gray-500 mt-0.5">Candidates shortlisted against their respective job roles</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
         </div>
@@ -117,7 +117,7 @@ export function ScreeningModal({ candidates, onClose }) {
         {loading && (
           <div className="flex flex-col items-center justify-center py-16 gap-3 flex-1">
             <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-            <p className="text-sm text-gray-500">Claude is screening all candidates by role…</p>
+            {/* <p className="text-sm text-gray-500">Claude is screening all candidates by role…</p> */}
           </div>
         )}
 
@@ -125,8 +125,8 @@ export function ScreeningModal({ candidates, onClose }) {
         {error && (
           <div className="flex-1 flex items-center justify-center py-12 text-center">
             <div>
-              <p className="text-sm font-medium text-red-500">Screening failed: {error}</p>
-              <p className="text-xs text-gray-400 mt-1">Check your ANTHROPIC_API_KEY in server/.env</p>
+              <p className="text-sm font-medium text-red-500">shortlisting failed {error}</p>
+              {/* <p className="text-xs text-gray-400 mt-1">Check your ANTHROPIC_API_KEY in server/.env</p> */}
             </div>
           </div>
         )}

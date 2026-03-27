@@ -1,26 +1,29 @@
 export const STATUSES = [
-  'Screening',
-  'Interview R1',
-  'Interview R2',
-  'Interview R3',
+  'Shortlist',
+  'Screen',
+  'In Evaluation R1',
+  'In Evaluation R2',
+  'In Evaluation R3',
   'Offer',
-  'Rejected',
+  'Reject',
 ]
 
 export const FORWARD_MAP = {
-  Screening:      'Interview R1',
-  'Interview R1': 'Interview R2',
-  'Interview R2': 'Interview R3',
-  'Interview R3': 'Offer',
+  Shortlist:           'Screen',
+  Screen:              'In Evaluation R1',
+  'In Evaluation R1':  'In Evaluation R2',
+  'In Evaluation R2':  'In Evaluation R3',
+  'In Evaluation R3':  'Offer',
 }
 
 export const STATUS_META = {
-  Screening:      { bg: 'bg-yellow-100', text: 'text-yellow-800', dot: 'bg-yellow-400', border: 'border-yellow-300', label: 'Screening',      order: 0 },
-  'Interview R1': { bg: 'bg-blue-100',   text: 'text-blue-800',   dot: 'bg-blue-400',   border: 'border-blue-300',   label: 'Interview · R1', order: 1 },
-  'Interview R2': { bg: 'bg-violet-100', text: 'text-violet-800', dot: 'bg-violet-400', border: 'border-violet-300', label: 'Interview · R2', order: 2 },
-  'Interview R3': { bg: 'bg-indigo-100', text: 'text-indigo-800', dot: 'bg-indigo-400', border: 'border-indigo-300', label: 'Interview · R3', order: 3 },
-  Offer:          { bg: 'bg-green-100',  text: 'text-green-800',  dot: 'bg-green-500',  border: 'border-green-300',  label: 'Offer',          order: 4 },
-  Rejected:       { bg: 'bg-red-100',    text: 'text-red-700',    dot: 'bg-red-400',    border: 'border-red-300',    label: 'Rejected',       order: 5 },
+  Shortlist:           { bg: 'bg-sky-100',    text: 'text-sky-800',    dot: 'bg-sky-400',    border: 'border-sky-300',    label: 'Shortlist',         order: 0 },
+  Screen:              { bg: 'bg-yellow-100', text: 'text-yellow-800', dot: 'bg-yellow-400', border: 'border-yellow-300', label: 'Screen',            order: 1 },
+  'In Evaluation R1':  { bg: 'bg-blue-100',   text: 'text-blue-800',   dot: 'bg-blue-400',   border: 'border-blue-300',   label: 'In Evaluation · R1',order: 2 },
+  'In Evaluation R2':  { bg: 'bg-violet-100', text: 'text-violet-800', dot: 'bg-violet-400', border: 'border-violet-300', label: 'In Evaluation · R2',order: 3 },
+  'In Evaluation R3':  { bg: 'bg-indigo-100', text: 'text-indigo-800', dot: 'bg-indigo-400', border: 'border-indigo-300', label: 'In Evaluation · R3',order: 4 },
+  Offer:               { bg: 'bg-green-100',  text: 'text-green-800',  dot: 'bg-green-500',  border: 'border-green-300',  label: 'Offer',             order: 5 },
+  Reject:            { bg: 'bg-red-100',    text: 'text-red-700',    dot: 'bg-red-400',    border: 'border-red-300',    label: 'Reject',          order: 7 },
 }
 
 export const ALL_ROLES_FILTER = [

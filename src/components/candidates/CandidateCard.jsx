@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { StatusDropdown } from '../common/StatusDropdown'
 import { RoundPipeline }  from '../common/RoundPipeline'
 import { IcoCheck }       from '../common/Icons'
@@ -11,16 +11,18 @@ export function CandidateCard({
   selected,
   onToggleSelect,
   onStatusChange,
-  onForward,
   onSchedule,
   onVideo,
   onDelete,
   onViewQuestions,
   onViewDetail,
 }) {
-  const [expanded, setExpanded] = useState(false)
+  const [expanded,      setExpanded]      = useState(false)
+  const [pendingStatus, setPendingStatus] = useState(candidate.status)
+  useEffect(() => { setPendingStatus(candidate.status) }, [candidate.status])
   const hl = (text) => highlight(text, searchTerm)
   const hasQuestions = candidate.sentQuestions?.length > 0
+  const isDirty = pendingStatus !== candidate.status
 
   return (
     <div
@@ -61,7 +63,7 @@ export function CandidateCard({
 
           {/* Status */}
           <div onClick={(e) => e.stopPropagation()}>
-            <StatusDropdown currentStatus={candidate.status} onChange={(s) => onStatusChange(candidate.id, s)} />
+            <StatusDropdown currentStatus={pendingStatus} onChange={setPendingStatus} />
           </div>
         </div>
 
@@ -124,13 +126,22 @@ export function CandidateCard({
       {/* Card footer with actions */}
       <div className="border-t border-gray-100 px-4 py-2 flex items-center justify-between bg-gray-50">
         <span className="text-[10px] text-gray-400">Applied {fmtDate(candidate.appliedDate)}</span>
-        <ActionButtons
-          candidate={candidate}
-          onForward={onForward}
-          onSchedule={onSchedule}
-          onVideo={onVideo}
-          onDelete={onDelete}
-        />
+        <div className="flex items-center gap-1">
+          {isDirty && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onStatusChange(candidate.id, pendingStatus) }}
+              className="text-[11px] font-semibold px-3 py-1 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+            >
+              Move
+            </button>
+          )}
+          <ActionButtons
+            candidate={candidate}
+            onSchedule={onSchedule}
+            onVideo={onVideo}
+            onDelete={onDelete}
+          />
+        </div>
       </div>
     </div>
   )

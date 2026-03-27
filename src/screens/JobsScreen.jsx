@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useJobs } from '../hooks/useJobs'
+import { api } from '../api/client.js'
 
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
@@ -27,7 +28,7 @@ function ScreeningModal({ job, results, loading, error, onClose }) {
         {/* Header */}
         <div className="px-6 py-5 border-b border-gray-100 flex items-start justify-between">
           <div>
-            <h2 className="text-base font-bold text-gray-900">AI Candidate Screening</h2>
+            <h2 className="text-base font-bold text-gray-900"> Shortlisting Candidates </h2>
             <p className="text-xs text-gray-500 mt-0.5">{job.job_title} · {job.department}</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
@@ -105,7 +106,7 @@ function ScreeningModal({ job, results, loading, error, onClose }) {
 }
 
 // ── Job Card ──────────────────────────────────────────────────────────────────
-function JobCard({ job, candidates, onScreen }) {
+function JobCard({ job, candidates, onScreen, onViewScreened, isAllScreened, hasNoCandidates }) {
   const [expanded, setExpanded] = useState(false)
   const typeColor = TYPE_COLORS[job.employee_type] || 'bg-gray-100 text-gray-600'
 
@@ -182,12 +183,25 @@ function JobCard({ job, candidates, onScreen }) {
         >
           {expanded ? 'Less ▲' : 'Details ▼'}
         </button>
-        <button
-          onClick={() => onScreen(job)}
-          className="flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
-        >
-          ✦ Screen Candidates
-        </button>
+        {hasNoCandidates ? (
+          <span className="text-[11px] font-medium px-3 py-1.5 rounded-lg bg-gray-100 text-gray-400 cursor-default">
+            No Candidates
+          </span>
+        ) : isAllScreened ? (
+          <button
+            onClick={() => onViewScreened(job)}
+            className="flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors"
+          >
+            👁 View Screened
+          </button>
+        ) : (
+          <button
+            onClick={() => onScreen(job)}
+            className="flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+          >
+            ✦ Screen Candidates
+          </button>
+        )}
       </div>
     </div>
   )
@@ -196,12 +210,18 @@ function JobCard({ job, candidates, onScreen }) {
 // ── Main Screen ───────────────────────────────────────────────────────────────
 export function JobsScreen({ candidates = [] }) {
   const { jobs, loading, error, refetch } = useJobs()
-  const [search,      setSearch]      = useState('')
-  const [typeFilter,  setTypeFilter]  = useState('All')
-  const [screenJob,   setScreenJob]   = useState(null)
-  const [screenRes,   setScreenRes]   = useState([])
-  const [screenLoad,  setScreenLoad]  = useState(false)
-  const [screenErr,   setScreenErr]   = useState(null)
+  const [search,        setSearch]        = useState('')
+  const [typeFilter,    setTypeFilter]    = useState('All')
+  const [screenJob,     setScreenJob]     = useState(null)
+  const [screenRes,     setScreenRes]     = useState([])
+  const [screenLoad,    setScreenLoad]    = useState(false)
+  const [screenErr,     setScreenErr]     = useState(null)
+  const [screenedRows,  setScreenedRows]  = useState([]) // all DB screening results
+
+  // Load existing screening results on mount
+  useEffect(() => {
+    api.getScreeningResults().then(setScreenedRows).catch(() => {})
+  }, [])
 
   const types = ['All', ...new Set(jobs.map((j) => j.employee_type).filter(Boolean))]
 
@@ -213,22 +233,95 @@ export function JobsScreen({ candidates = [] }) {
     return matchType && matchSearch
   })
 
+  // A job matches a candidate role if either string contains the other (case-insensitive)
+  const roleMatchesJob = (candidateRole, jobTitle) => {
+    if (!candidateRole || !jobTitle) return false
+    const r = candidateRole.toLowerCase()
+    const j = jobTitle.toLowerCase()
+    return r === j || j.includes(r) || r.includes(j)
+  }
+
+  // Candidates that match this job by role title
+  const jobCandidates = (job) =>
+    candidates.filter((c) => roleMatchesJob(c.role, job.job_title))
+
+  // Screening results already saved for this job (match by candidate role against job title)
+  const jobScreenedRows = (job) =>
+    screenedRows.filter((r) => roleMatchesJob(r.role, job.job_title))
+
+  // All matching candidates are already screened
+  const allScreened = (job) => {
+    const jc = jobCandidates(job)
+    if (jc.length === 0) return false
+    const screenedIds = new Set(jobScreenedRows(job).map((r) => r.candidate_id))
+    return jc.every((c) => screenedIds.has(c.id))
+  }
+
+  const handleViewScreened = (job) => {
+    const rows = jobScreenedRows(job)
+    const results = rows.map((r) => ({
+      id:      r.candidate_id,
+      name:    r.candidate_name,
+      score:   r.score,
+      verdict: r.verdict,
+      reasons: r.reasons ?? [],
+      concern: r.concern,
+    }))
+    setScreenJob(job)
+    setScreenRes(results)
+    setScreenErr(null)
+    setScreenLoad(false)
+  }
+
   const handleScreen = async (job) => {
     setScreenJob(job)
     setScreenRes([])
     setScreenErr(null)
     setScreenLoad(true)
 
-    // Send all candidates — Claude will match by role/skills
+    // Only screen candidates not yet in DB for this job
+    const screenedIds = new Set(jobScreenedRows(job).map((r) => r.candidate_id))
+    const toScreen = jobCandidates(job).filter((c) => !screenedIds.has(c.id))
+
+    if (toScreen.length === 0) {
+      handleViewScreened(job)
+      return
+    }
+
     try {
       const res = await fetch(`${BASE}/api/screen`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ job, candidates }),
+        body: JSON.stringify({ job, candidates: toScreen }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Screening failed')
-      setScreenRes(data)
+
+      // Save new results to DB
+      const nameToId = Object.fromEntries(toScreen.map((c) => [c.name.toLowerCase(), c.id]))
+      const enriched = data.map((r) => ({
+        ...r,
+        id: nameToId[r.name?.toLowerCase()] ?? r.id,
+        job_title: job.job_title,
+        department: job.department,
+      }))
+      await api.saveScreeningResults(enriched)
+
+      // Refresh DB rows and merge with any already-screened for this job
+      const fresh = await api.getScreeningResults()
+      setScreenedRows(fresh)
+
+      const allForJob = fresh
+        .filter((r) => r.job_title?.toLowerCase() === job.job_title?.toLowerCase())
+        .map((r) => ({
+          id:      r.candidate_id,
+          name:    r.candidate_name,
+          score:   r.score,
+          verdict: r.verdict,
+          reasons: r.reasons ?? [],
+          concern: r.concern,
+        }))
+      setScreenRes(allForJob)
     } catch (err) {
       setScreenErr(err.message)
     } finally {
@@ -291,7 +384,15 @@ export function JobsScreen({ candidates = [] }) {
         filtered.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filtered.map((job) => (
-              <JobCard key={job.job_id} job={job} candidates={candidates} onScreen={handleScreen} />
+              <JobCard
+                key={job.job_id}
+                job={job}
+                candidates={candidates}
+                onScreen={handleScreen}
+                onViewScreened={handleViewScreened}
+                isAllScreened={allScreened(job)}
+                hasNoCandidates={jobCandidates(job).length === 0}
+              />
             ))}
           </div>
         ) : (

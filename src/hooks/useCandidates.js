@@ -58,8 +58,8 @@ export function useCandidates(showToast) {
 
   const handleReject = useCallback(
     (candidate) => {
-      updateCandidate(candidate.id, { status: 'Rejected' })
-      showToast(`${candidate.name} → Rejected`)
+      updateCandidate(candidate.id, { status: 'Reject' })
+      showToast(`${candidate.name} → Reject`)
     },
     [updateCandidate, showToast]
   )
@@ -109,7 +109,7 @@ export function useCandidates(showToast) {
   const applySentQuestions = useCallback((selectedIds, previewMap) => {
     setCandidates((prev) =>
       prev.map((c) => {
-        if (!selectedIds.has(c.id) || c.status !== 'Interview R1') return c
+        if (!selectedIds.has(c.id) || c.status !== 'Screen') return c
         const questions = previewMap[c.role] ?? []
         const updated = { ...c, sentQuestions: [...(c.sentQuestions ?? []), ...questions] }
         // Persist to sent_questions table

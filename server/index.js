@@ -597,7 +597,7 @@ app.post('/api/test/:token/submit', async (req, res) => {
         // Reject
         await pool.query(
           'UPDATE candidates SET status_id = (SELECT id FROM statuses WHERE label = $1) WHERE id = $2',
-          ['Rejected', candidate_id]
+          ['Reject', candidate_id]
         );
       }
     }
@@ -637,7 +637,7 @@ app.get('/api/darwinbox/jobs', async (req, res) => {
   }
 });
 
-// --- AI Screening ---
+// --- Shortlisting ---
 app.post('/api/screen', async (req, res) => {
   const { job, candidates } = req.body;
   if (!job || !candidates?.length) {

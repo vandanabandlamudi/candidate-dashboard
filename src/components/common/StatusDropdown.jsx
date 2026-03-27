@@ -1,15 +1,37 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { STATUSES, STATUS_META } from '../../constants/statuses'
 import { IcoCheck, IcoDown } from './Icons'
 
 export function StatusDropdown({ currentStatus, onChange }) {
   const [open, setOpen] = useState(false)
-  const m = STATUS_META[currentStatus] ?? STATUS_META['Screening']
+  const [pos,  setPos]  = useState({ top: 0, left: 0 })
+  const btnRef = useRef(null)
+  const m = STATUS_META[currentStatus] ?? STATUS_META['Shortlist']
+
+  const handleOpen = (e) => {
+    e.stopPropagation()
+    if (!open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect()
+      setPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right })
+    }
+    setOpen((v) => !v)
+  }
+
+  // Close on scroll / resize
+  useEffect(() => {
+    if (!open) return
+    const close = () => setOpen(false)
+    window.addEventListener('scroll', close, true)
+    window.addEventListener('resize', close)
+    return () => { window.removeEventListener('scroll', close, true); window.removeEventListener('resize', close) }
+  }, [open])
 
   return (
     <div className="relative">
       <button
-        onClick={(e) => { e.stopPropagation(); setOpen(!open) }}
+        ref={btnRef}
+        onClick={handleOpen}
         className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap hover:brightness-95 transition-all ${m.bg} ${m.text} ${m.border}`}
         title="Change status"
       >
@@ -18,11 +40,14 @@ export function StatusDropdown({ currentStatus, onChange }) {
         <IcoDown />
       </button>
 
-      {open && (
+      {open && createPortal(
         <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-1.5 z-20 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden min-w-40">
-            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 pt-2.5 pb-1">
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div
+            className="fixed z-50 bg-white rounded-xl shadow-xl border border-gray-200 min-w-44 py-1"
+            style={{ top: pos.top, right: pos.right, left: 'auto' }}
+          >
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 pt-2 pb-1">
               Move to
             </p>
             {STATUSES.map((s) => {
@@ -42,7 +67,8 @@ export function StatusDropdown({ currentStatus, onChange }) {
               )
             })}
           </div>
-        </>
+        </>,
+        document.body
       )}
     </div>
   )

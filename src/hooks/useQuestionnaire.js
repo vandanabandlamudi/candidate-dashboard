@@ -47,9 +47,9 @@ export function useQuestionnaire(candidates, selectedIds, applySentQuestions, cl
   const [usedQIds,   setUsedQIds]   = useState(loadFromSession)
   const [showQModal, setShowQModal] = useState(false)
 
-  // Candidates that are selected AND in Round 1
+  // Candidates that are selected AND in Screening stage (where assignments are sent)
   const r1Selected = useMemo(
-    () => candidates.filter((c) => selectedIds.has(c.id) && c.status === 'Interview R1'),
+    () => candidates.filter((c) => selectedIds.has(c.id) && c.status === 'Screen'),
     [candidates, selectedIds]
   )
 

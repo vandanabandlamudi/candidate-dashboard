@@ -6,16 +6,19 @@ const ROLES = [
   'Product Manager',
   'Data Scientist',
   'DevOps Engineer',
+  'Finance Analyst',
 ]
 
 // ── Statuses ──────────────────────────────────────────────────────────────────
 const STATUSES = [
-  { label: 'Screening',     order_index: 0, next: 'Interview R1' },
-  { label: 'Interview R1',  order_index: 1, next: 'Interview R2' },
-  { label: 'Interview R2',  order_index: 2, next: 'Interview R3' },
-  { label: 'Interview R3',  order_index: 3, next: 'Offer'        },
-  { label: 'Offer',         order_index: 4, next: null           },
-  { label: 'Rejected',      order_index: 5, next: null           },
+  { label: 'Shortlist',        order_index: 0, next: 'Screen'             },
+  { label: 'Screen',           order_index: 1, next: 'In Evaluation R1'   },
+  { label: 'In Evaluation R1', order_index: 2, next: 'In Evaluation R2'   },
+  { label: 'In Evaluation R2', order_index: 3, next: 'In Evaluation R3'   },
+  { label: 'In Evaluation R3', order_index: 4, next: 'Offer'              },
+  { label: 'Offer',            order_index: 5, next: 'null'   },
+  // { label: 'Active Employees', order_index: 6, next: null                 },
+  { label: 'Reject',         order_index: 7, next: null                 },
 ]
 
 // ── Questions (open-ended, set 1) ─────────────────────────────────────────────
@@ -88,24 +91,40 @@ const QUESTIONS = {
     { id: 'dv14', text: 'Describe your experience with service mesh technologies like Istio or Linkerd.' },
     { id: 'dv15', text: 'Walk us through a major outage you helped resolve. What did you learn?' },
   ],
+  'Finance Analyst': [
+    { id: 'fa1',  text: 'Walk us through how you build a 3-statement financial model from scratch.' },
+    { id: 'fa2',  text: 'How do you approach variance analysis when actuals deviate significantly from budget?' },
+    { id: 'fa3',  text: 'Explain the difference between IRR, NPV, and payback period. When would you use each?' },
+    { id: 'fa4',  text: 'Describe your experience with financial forecasting and the models you have used.' },
+    { id: 'fa5',  text: 'How do you ensure data integrity when working with large financial datasets in Excel or SQL?' },
+    { id: 'fa6',  text: "Walk us through how you'd prepare an executive-level financial report." },
+    { id: 'fa7',  text: 'What is working capital, and how does it affect cash flow management?' },
+    { id: 'fa8',  text: 'How do you evaluate the financial viability of a new business initiative?' },
+    { id: 'fa9',  text: 'Describe a time your financial analysis led to a significant business decision.' },
+    { id: 'fa10', text: 'How do you stay current with IFRS or GAAP changes that affect financial reporting?' },
+  ],
 }
 
 // ── Candidates ────────────────────────────────────────────────────────────────
 const TODAY = new Date().toISOString().split('T')[0]
 
 const CANDIDATES = [
-  { name: 'Priya Sharma',   email: 'priya.sharma@email.com',   phone: '+91 98765 43210', role: 'Senior Frontend Engineer', status: 'Interview R1', exp: 6, title: 'Frontend Engineer',         company: 'Infosys',  appliedDate: TODAY,        summary: 'Strong React developer with experience building scalable SPAs.',                                            skills: ['React', 'TypeScript', 'CSS', 'GraphQL'] },
-  { name: 'Arjun Mehta',    email: 'arjun.mehta@email.com',    phone: '+91 91234 56789', role: 'Product Manager',          status: 'Screening',    exp: 5, title: 'Associate PM',              company: 'Flipkart', appliedDate: TODAY,        summary: 'Passionate PM with a track record of launching 0-to-1 features.',                                           skills: ['Roadmapping', 'Agile', 'SQL', 'Figma'] },
-  { name: 'Riya Nair',      email: 'riya.nair@email.com',      phone: '+91 87654 32109', role: 'Senior Frontend Engineer', status: 'Offer',        exp: 7, title: 'Senior UI Developer',       company: 'Wipro',    appliedDate: TODAY,        summary: 'Full-stack leaning frontend engineer with deep expertise in Vue and React.',                                  skills: ['Vue.js', 'React', 'Node.js', 'Webpack'] },
-  { name: 'Karan Bose',     email: 'karan.bose@email.com',     phone: '+91 99887 76655', role: 'Data Scientist',           status: 'Rejected',     exp: 3, title: 'Data Analyst',              company: 'Mu Sigma', appliedDate: TODAY,        summary: 'Data analyst transitioning to data science.',                                                                skills: ['Python', 'ML', 'TensorFlow', 'SQL'] },
-  { name: 'Sneha Iyer',     email: 'sneha.iyer@email.com',     phone: '+91 80001 23456', role: 'Data Scientist',           status: 'Interview R1', exp: 5, title: 'ML Engineer',               company: 'Ola',      appliedDate: TODAY,        summary: 'Experienced ML engineer with NLP specialization.',                                                           skills: ['Python', 'PyTorch', 'NLP', 'Spark'] },
-  { name: 'Vikram Patel',   email: 'vikram.patel@email.com',   phone: '+91 95555 66677', role: 'DevOps Engineer',          status: 'Screening',    exp: 4, title: 'Cloud Engineer',            company: 'HCL',      appliedDate: TODAY,        summary: 'Cloud-native engineer with strong Kubernetes and CI/CD expertise.',                                          skills: ['Kubernetes', 'Docker', 'AWS', 'Terraform'] },
-  { name: 'Meera Krishnan', email: 'meera.k@email.com',        phone: '+91 77788 99900', role: 'Product Manager',          status: 'Interview R1', exp: 8, title: 'Senior PM',                 company: 'Swiggy',   appliedDate: TODAY,        summary: 'Senior PM with consumer product experience at hyper-growth startups.',                                       skills: ['OKRs', 'A/B Testing', 'Jira', 'User Research'] },
-  { name: 'Rahul Gupta',    email: 'rahul.gupta@email.com',    phone: '+91 88900 11223', role: 'DevOps Engineer',          status: 'Offer',        exp: 6, title: 'DevOps Lead',               company: 'Razorpay', appliedDate: TODAY,        summary: 'Seasoned DevOps lead who built and managed infra for a high-traffic payments platform.',                     skills: ['Jenkins', 'GitOps', 'GCP', 'Ansible'] },
-  { name: 'Ananya Reddy',   email: 'ananya.reddy@email.com',   phone: '+91 73344 55566', role: 'Senior Frontend Engineer', status: 'Screening',    exp: 4, title: 'Software Engineer II',      company: 'Zomato',   appliedDate: TODAY,        summary: 'Engineer with a strong focus on component libraries and testing.',                                           skills: ['React', 'Redux', 'Jest', 'Storybook'] },
-  { name: 'Nikhil Desai',   email: 'nikhil.desai@email.com',   phone: '+91 90012 34567', role: 'Data Scientist',           status: 'Screening',    exp: 2, title: 'Junior Data Scientist',     company: "BYJU'S",   appliedDate: TODAY,        summary: 'Early-career data scientist with a strong stats background.',                                               skills: ['R', 'Python', 'Statistics', 'Tableau'] },
-  { name: 'Divya Joshi',    email: 'divya.joshi@email.com',    phone: '+91 82233 44455', role: 'Product Manager',          status: 'Rejected',     exp: 3, title: 'Business Analyst',          company: 'TCS',      appliedDate: TODAY,        summary: 'BA with PM aspirations. Good grasp of product concepts.',                                                   skills: ['Figma', 'Analytics', 'Scrum', 'PRDs'] },
-  { name: 'Saurabh Tiwari', email: 'saurabh.tiwari@email.com', phone: '+91 96677 88899', role: 'DevOps Engineer',          status: 'Interview R1', exp: 5, title: 'Site Reliability Engineer', company: 'PhonePe',  appliedDate: TODAY,        summary: 'SRE with strong scripting skills and observability experience.',                                             skills: ['Docker', 'Linux', 'CI/CD', 'Python'] },
+  { name: 'Priya Sharma',   email: 'priya.sharma@email.com',   phone: '+91 98765 43210', role: 'Senior Frontend Engineer', status: 'Shortlist', exp: 6, title: 'Frontend Engineer',         company: 'Infosys',  appliedDate: TODAY, summary: 'Strong React developer with experience building scalable SPAs.',                                 skills: ['React', 'TypeScript', 'CSS', 'GraphQL'] },
+  { name: 'Arjun Mehta',    email: 'arjun.mehta@email.com',    phone: '+91 91234 56789', role: 'Product Manager',          status: 'Shortlist',     exp: 5, title: 'Associate PM',              company: 'Flipkart', appliedDate: TODAY, summary: 'Passionate PM with a track record of launching 0-to-1 features.',                            skills: ['Roadmapping', 'Agile', 'SQL', 'Figma'] },
+  { name: 'Riya Nair',      email: 'riya.nair@email.com',      phone: '+91 87654 32109', role: 'Senior Frontend Engineer', status: 'Shortlist',            exp: 7, title: 'Senior UI Developer',       company: 'Wipro',    appliedDate: TODAY, summary: 'Full-stack leaning frontend engineer with deep expertise in Vue and React.',                   skills: ['Vue.js', 'React', 'Node.js', 'Webpack'] },
+  { name: 'Karan Bose',     email: 'karan.bose@email.com',     phone: '+91 99887 76655', role: 'Data Scientist',           status: 'Reject',         exp: 3, title: 'Data Analyst',              company: 'Mu Sigma', appliedDate: TODAY, summary: 'Data analyst transitioning to data science.',                                                skills: ['Python', 'ML', 'TensorFlow', 'SQL'] },
+  { name: 'Sneha Iyer',     email: 'sneha.iyer@email.com',     phone: '+91 80001 23456', role: 'Data Scientist',           status: 'Shortlist', exp: 5, title: 'ML Engineer',               company: 'Ola',      appliedDate: TODAY, summary: 'Experienced ML engineer with NLP specialization.',                                           skills: ['Python', 'PyTorch', 'NLP', 'Spark'] },
+  { name: 'Vikram Patel',   email: 'vikram.patel@email.com',   phone: '+91 95555 66677', role: 'DevOps Engineer',          status: 'Shortlist',        exp: 4, title: 'Cloud Engineer',            company: 'HCL',      appliedDate: TODAY, summary: 'Cloud-native engineer with strong Kubernetes and CI/CD expertise.',                          skills: ['Kubernetes', 'Docker', 'AWS', 'Terraform'] },
+  { name: 'Meera Krishnan', email: 'meera.k@email.com',        phone: '+91 77788 99900', role: 'Product Manager',          status: 'Shortlist', exp: 8, title: 'Senior PM',                 company: 'Swiggy',   appliedDate: TODAY, summary: 'Senior PM with consumer product experience at hyper-growth startups.',                        skills: ['OKRs', 'A/B Testing', 'Jira', 'User Research'] },
+  { name: 'Rahul Gupta',    email: 'rahul.gupta@email.com',    phone: '+91 88900 11223', role: 'DevOps Engineer',          status: 'Shortlist',            exp: 6, title: 'DevOps Lead',               company: 'Razorpay', appliedDate: TODAY, summary: 'Seasoned DevOps lead who built and managed infra for a high-traffic payments platform.',      skills: ['Jenkins', 'GitOps', 'GCP', 'Ansible'] },
+  { name: 'Ananya Reddy',   email: 'ananya.reddy@email.com',   phone: '+91 73344 55566', role: 'Senior Frontend Engineer', status: 'Shortlist',     exp: 4, title: 'Software Engineer II',      company: 'Zomato',   appliedDate: TODAY, summary: 'Engineer with a strong focus on component libraries and testing.',                           skills: ['React', 'Redux', 'Jest', 'Storybook'] },
+  { name: 'Nikhil Desai',   email: 'nikhil.desai@email.com',   phone: '+91 90012 34567', role: 'Data Scientist',           status: 'Shortlist',     exp: 2, title: 'Junior Data Scientist',     company: "BYJU'S",   appliedDate: TODAY, summary: 'Early-career data scientist with a strong stats background.',                               skills: ['R', 'Python', 'Statistics', 'Tableau'] },
+  { name: 'Divya Joshi',    email: 'divya.joshi@email.com',    phone: '+91 82233 44455', role: 'Product Manager',          status: 'Reject',         exp: 3, title: 'Business Analyst',          company: 'TCS',      appliedDate: TODAY, summary: 'BA with PM aspirations. Good grasp of product concepts.',                                   skills: ['Figma', 'Analytics', 'Scrum', 'PRDs'] },
+  { name: 'Saurabh Tiwari', email: 'saurabh.tiwari@email.com', phone: '+91 96677 88899', role: 'DevOps Engineer',    status: 'Shortlist', exp: 5, title: 'Site Reliability Engineer', company: 'PhonePe',    appliedDate: TODAY, summary: 'SRE with strong scripting skills and observability experience.',                                        skills: ['Docker', 'Linux', 'CI/CD', 'Python'] },
+  { name: 'Ishaan Kapoor',  email: 'ishaan.kapoor@email.com',  phone: '+91 91122 33445', role: 'Finance Analyst',   status: 'Shortlist', exp: 4, title: 'Financial Analyst',        company: 'Deloitte',   appliedDate: TODAY, summary: 'Detail-oriented analyst with expertise in financial modelling and FP&A.',                          skills: ['Excel', 'SQL', 'Power BI', 'Financial Modelling'] },
+  { name: 'Pooja Verma',    email: 'pooja.verma@email.com',    phone: '+91 98001 22334', role: 'Finance Analyst',   status: 'Shortlist', exp: 2, title: 'Junior Finance Analyst',    company: 'KPMG',       appliedDate: TODAY, summary: 'Early-career analyst with strong accounting fundamentals and data skills.',                       skills: ['Excel', 'Tally', 'Accounting', 'Tableau'] },
+  { name: 'Rohit Saxena',   email: 'rohit.saxena@email.com',   phone: '+91 99334 55678', role: 'Finance Analyst',   status: 'Shortlist', exp: 6, title: 'Senior Finance Analyst',    company: 'EY',         appliedDate: TODAY, summary: 'Experienced finance professional with deep knowledge of IFRS and budget management.',          skills: ['IFRS', 'Budgeting', 'SAP', 'SQL'] },
+  { name: 'Nandita Rao',    email: 'nandita.rao@email.com',    phone: '+91 87733 66112', role: 'Finance Analyst',   status: 'Reject',    exp: 3, title: 'Business Finance Analyst',  company: 'Wipro',      appliedDate: TODAY, summary: 'Finance analyst with some FP&A exposure but limited modelling depth.',                          skills: ['Excel', 'PowerPoint', 'Basic SQL'] },
 ]
 
 // ── Seed ──────────────────────────────────────────────────────────────────────
