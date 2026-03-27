@@ -53,9 +53,9 @@ export function StatusBar({ candidates, selectedRole, activeStatus, onStatusFilt
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 sm:space-y-8">
       {/* Status count cards */}
-      <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-8 gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-2 sm:gap-3">
         {STAT_CONFIG.map(({ key, label, color, bg, status }) => {
           const isActive = status === null ? activeStatus === 'All Statuses' : activeStatus === status
           return (
