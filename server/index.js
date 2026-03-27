@@ -644,7 +644,7 @@ app.post('/api/screen', async (req, res) => {
     return res.status(400).json({ error: 'job and candidates are required' });
   }
 
-  const prompt = `You are an expert recruiter. Screen the following candidates for this job and return a JSON array.
+  const prompt = `You are an expert recruiter conducting a first-stage shortlist screening. Evaluate each candidate strictly and fairly against the job requirements.
 
 JOB:
 - Title: ${job.job_title}
@@ -656,12 +656,28 @@ JOB:
 
 CANDIDATES:
 ${candidates.map((c) => `ID: ${c.id}
-   Name: ${c.name}
-   Role applied: ${c.role}
-   Experience: ${c.exp} years
-   Skills: ${(c.skills || []).join(', ')}
-   Summary: ${c.summary}
-   Current title: ${c.title} at ${c.company}`).join('\n\n')}
+  Name: ${c.name}
+  Current title: ${c.title} at ${c.company}
+  Total experience: ${c.exp} years
+  Skills: ${(c.skills || []).join(', ')}
+  Education: ${c.education || 'Not specified'}
+  Summary: ${c.summary}`).join('\n\n')}
+
+SCORING CRITERIA (total 100 points):
+- Functional/Technical knowledge (35%): Match of skills, tools, and technical competencies to the role
+- Domain knowledge (18%): Industry or domain experience relevant to this role; for risk/compliance roles, prioritize risk awareness
+- Experience (12%): Total and relevant years of experience within or close to the required range
+- Education (8%): Relevant degree, field of study, or institutional background
+- Communication (8%): Clarity and quality of how the candidate describes their background
+- Job hopping (4%): Penalize frequent short tenures (under 1 year), but DO NOT penalize career gaps — gaps are not job hopping
+- Certifications (2%): Relevant certifications that complement the role
+
+SHORTLISTING RULES:
+- Must-have: Candidate must have core required skills; if missing, cap score at 40
+- Must-have: Candidate must meet minimum experience threshold; if below, cap score at 50
+- Do NOT penalize unexplained career gaps
+- Match skills semantically, not just by keyword (e.g., "JS" = "JavaScript")
+- Score on demonstrated relevance and depth, not just presence of keywords
 
 Return ONLY a valid JSON array (no markdown, no explanation) with one object per candidate.
 Use the exact numeric ID provided above for each candidate — do not change or reassign IDs.
@@ -672,11 +688,10 @@ Use the exact numeric ID provided above for each candidate — do not change or 
     "score": <0-100>,
     "verdict": "Strong Match" | "Good Match" | "Partial Match" | "Not a Match",
     "reasons": ["<reason 1>", "<reason 2>", "<reason 3>"],
-    "concern": "<one main concern or null>"
+    "concern": "<one main concern, or null if none>"
   }
 ]
 
-Score based on: role fit (40%), experience range (30%), skills match (20%), salary fit (10%).
 Sort by score descending.`;
 
   try {
