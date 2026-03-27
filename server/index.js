@@ -524,7 +524,7 @@ app.get('/api/test/:token', async (req, res) => {
 });
 
 app.post('/api/test/:token/submit', async (req, res) => {
-  const { answers, correctionMode } = req.body;
+  const { answers } = req.body;
   try {
     const tokenRow = await pool.query(
       'SELECT candidate_id, paper_id, submitted_at FROM test_tokens WHERE token = $1',
@@ -545,61 +545,77 @@ app.post('/api/test/:token/submit', async (req, res) => {
     let autoMax = 0;
     const totalMax = questions.reduce((s, q) => s + (q.marks ?? 1), 0);
 
+    console.log('[submit] paper_id:', paper_id, 'questions count:', questions.length);
+    console.log('[submit] first question:', JSON.stringify(questions[0]));
+    console.log('[submit] answers keys:', Object.keys(answers).slice(0, 3));
+
     const answerRows = questions.map((q) => {
       const answer = answers[q.id] ?? null;
       let correct = null;
       let autoGraded = false;
       let marks = null;
 
-      if (q.type === 'mcq' && correctionMode === 'auto') {
+      if (q.type === 'mcq') {
         autoGraded = true;
-        correct = answer === q.correctOption;
+        correct = Number(answer) === Number(q.correctOption);
         marks = correct ? (q.marks ?? 1) : 0;
         autoMax += (q.marks ?? 1);
         autoScore += marks;
       }
+      console.log('[submit] q.id:', q.id, 'type:', q.type, 'answer:', answer, 'correctOption:', q.correctOption, 'correct:', correct, 'autoGraded:', autoGraded);
       return { questionId: q.id, answer, correct, autoGraded, marks, maxMarks: q.marks ?? 1 };
     });
+    console.log('[submit] autoScore:', autoScore, 'autoMax:', autoMax);
 
     const now = new Date().toISOString();
-    const sub = await pool.query(
-      `INSERT INTO submissions (candidate_id, paper_id, correction_mode, submitted_at, auto_score, auto_max, total_max)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
-      [candidate_id, paper_id, correctionMode ?? 'auto', now, autoScore, autoMax, totalMax]
-    );
-    const submissionId = sub.rows[0].id;
+    const client = await pool.connect();
+    let submissionId;
+    try {
+      await client.query('BEGIN');
 
-    for (const a of answerRows) {
-      await pool.query(
-        `INSERT INTO submission_answers (submission_id, question_id, answer, correct, auto_graded, marks, max_marks)
-         VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-        [submissionId, a.questionId, a.answer !== null ? String(a.answer) : null, a.correct, a.autoGraded, a.marks, a.maxMarks]
+      const sub = await client.query(
+        `INSERT INTO submissions (candidate_id, paper_id, correction_mode, submitted_at, auto_score, auto_max, total_max)
+         VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+        [candidate_id, paper_id, 'auto', now, autoScore, autoMax, totalMax]
       );
-    }
+      submissionId = sub.rows[0].id;
 
-    await pool.query('UPDATE test_tokens SET submitted_at = $1 WHERE token = $2', [now, req.params.token]);
-
-    // Auto-advance or auto-reject based on MCQ score (exclusively MCQ papers only)
-    if (correctionMode === 'auto' && autoMax > 0 && autoMax === totalMax) {
-      const pct = autoScore / autoMax;
-      if (pct >= 0.8) {
-        // Advance to next round using next_status_id
-        await pool.query(`
-          UPDATE candidates SET status_id = (
-            SELECT s.next_status_id FROM statuses s
-            JOIN candidates c ON c.status_id = s.id
-            WHERE c.id = $1
-          ) WHERE id = $1 AND (
-            SELECT next_status_id FROM statuses WHERE id = (SELECT status_id FROM candidates WHERE id = $1)
-          ) IS NOT NULL
-        `, [candidate_id]);
-      } else {
-        // Reject
-        await pool.query(
-          'UPDATE candidates SET status_id = (SELECT id FROM statuses WHERE label = $1) WHERE id = $2',
-          ['Reject', candidate_id]
+      for (const a of answerRows) {
+        await client.query(
+          `INSERT INTO submission_answers (submission_id, question_id, answer, correct, auto_graded, marks, max_marks)
+           VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+          [submissionId, a.questionId, a.answer !== null ? String(a.answer) : null, a.correct, a.autoGraded, a.marks, a.maxMarks]
         );
       }
+
+      await client.query('UPDATE test_tokens SET submitted_at = $1 WHERE token = $2', [now, req.params.token]);
+
+      // Auto-advance or auto-reject based on MCQ score (exclusively MCQ papers only)
+      if (autoMax > 0 && autoMax === totalMax) {
+        if (autoScore >= 8) {
+          await client.query(`
+            UPDATE candidates SET status_id = (
+              SELECT s.next_status_id FROM statuses s
+              JOIN candidates c ON c.status_id = s.id
+              WHERE c.id = $1
+            ) WHERE id = $1 AND (
+              SELECT next_status_id FROM statuses WHERE id = (SELECT status_id FROM candidates WHERE id = $1)
+            ) IS NOT NULL
+          `, [candidate_id]);
+        } else {
+          await client.query(
+            'UPDATE candidates SET status_id = (SELECT id FROM statuses WHERE label = $1) WHERE id = $2',
+            ['Rejected', candidate_id]
+          );
+        }
+      }
+
+      await client.query('COMMIT');
+    } catch (txErr) {
+      await client.query('ROLLBACK');
+      throw txErr;
+    } finally {
+      client.release();
     }
 
     res.status(201).json({ submissionId });

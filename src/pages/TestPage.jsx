@@ -23,9 +23,9 @@ export function TestPage({ token }) {
       })
   }, [token])
 
-  const handleSubmit = async (answers, correctionMode) => {
+  const handleSubmit = async (answers) => {
     try {
-      await api.submitTest(token, { answers, correctionMode })
+      await api.submitTest(token, { answers })
       setState('done')
     } catch (err) {
       setErrorMsg(err.message || 'Submission failed. Please try again.')

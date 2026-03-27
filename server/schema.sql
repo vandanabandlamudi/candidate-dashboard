@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS submissions (
 CREATE TABLE IF NOT EXISTS submission_answers (
     id            SERIAL PRIMARY KEY,
     submission_id INT NOT NULL REFERENCES submissions(id),
-    question_id   VARCHAR(10) NOT NULL REFERENCES questions(id),
+    question_id   VARCHAR(100) NOT NULL,
     answer        TEXT,
     correct       BOOLEAN DEFAULT NULL,
     auto_graded   BOOLEAN DEFAULT FALSE,

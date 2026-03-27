@@ -41,10 +41,10 @@ export function CandidateDetailPanel({
   const exclusiveMcqSubs = Object.values(candidateSubs).filter(
     (sub) => sub.autoMax > 0 && sub.autoMax === sub.totalMax
   )
-  const bestMcqPct = exclusiveMcqSubs.length > 0
-    ? Math.max(...exclusiveMcqSubs.map((sub) => sub.autoScore / sub.autoMax))
+  const bestMcqScore = exclusiveMcqSubs.length > 0
+    ? Math.max(...exclusiveMcqSubs.map((sub) => sub.autoScore))
     : null
-  const showReject = bestMcqPct !== null && bestMcqPct < 0.8
+  const showReject = bestMcqScore !== null && bestMcqScore < 8
 
   // Pipeline steps in order
   const pipeline = Object.keys(STATUS_META)

@@ -1,5 +1,45 @@
 const OPTION_LABELS = ['A', 'B', 'C', 'D']
 
+function downloadPaper(paper) {
+  const lines = []
+  lines.push(paper.title)
+  lines.push(`Role: ${paper.role}`)
+  lines.push(`Total marks: ${paper.questions.reduce((s, q) => s + (q.marks ?? 1), 0)}`)
+  lines.push('')
+  lines.push('─'.repeat(60))
+  lines.push('')
+
+  paper.questions.forEach((q, idx) => {
+    lines.push(`Q${idx + 1}. ${q.text}  [${q.marks} mark${q.marks !== 1 ? 's' : ''}]`)
+    if (q.type === 'mcq') {
+      q.options.forEach((opt, i) => lines.push(`   ${OPTION_LABELS[i]}) ${opt}`))
+    } else {
+      lines.push('   (Open-ended)')
+    }
+    lines.push('')
+  })
+
+  const mcqs = paper.questions.filter((q) => q.type === 'mcq')
+  if (mcqs.length > 0) {
+    lines.push('─'.repeat(60))
+    lines.push('ANSWER KEY')
+    lines.push('─'.repeat(60))
+    lines.push('')
+    mcqs.forEach((q, i) => {
+      const qIdx = paper.questions.indexOf(q) + 1
+      lines.push(`Q${qIdx}: ${OPTION_LABELS[q.correctOption]}`)
+    })
+  }
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href     = url
+  a.download = `${paper.title.replace(/[^a-z0-9]/gi, '_')}.txt`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 const ROLE_COLOR = {
   'Senior Frontend Engineer': 'bg-violet-100 text-violet-700',
   'Product Manager':          'bg-amber-100 text-amber-700',
@@ -33,6 +73,12 @@ export function PaperDetailView({ paper, onAssign, onEdit }) {
               </div>
             </div>
             <div className="flex gap-2 shrink-0">
+              <button
+                onClick={() => downloadPaper(paper)}
+                className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl hover:bg-emerald-100 transition-colors"
+              >
+                ↓ Download
+              </button>
               <button
                 onClick={() => onEdit(paper)}
                 className="text-xs text-gray-500 border border-gray-200 px-3 py-1.5 rounded-xl hover:bg-gray-50 transition-colors"

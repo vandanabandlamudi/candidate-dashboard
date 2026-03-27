@@ -133,7 +133,15 @@ async function seed() {
   try {
     await client.query('BEGIN')
 
+    // 0. Migrations — fix schema issues from older DB instances
+    await client.query(`ALTER TABLE questions ADD COLUMN IF NOT EXISTS set_number INT`)
+    // submission_answers.question_id was VARCHAR(10) with a wrong FK to questions table.
+    // Paper question IDs (from Drive import) are longer and don't exist in questions table.
+    await client.query(`ALTER TABLE submission_answers DROP CONSTRAINT IF EXISTS submission_answers_question_id_fkey`)
+    await client.query(`ALTER TABLE submission_answers ALTER COLUMN question_id TYPE VARCHAR(100)`)
+
     // 1. Roles
+    await client.query(`SELECT setval('roles_id_seq', COALESCE((SELECT MAX(id) FROM roles), 0))`)
     const roleIdMap = {}
     for (const name of ROLES) {
       const res = await client.query(
@@ -145,6 +153,8 @@ async function seed() {
     console.log('✓ Roles seeded')
 
     // 2. Statuses — two-pass: insert first, then link next_status_id
+    // Reset sequence to avoid PK conflicts if table already has rows
+    await client.query(`SELECT setval('statuses_id_seq', COALESCE((SELECT MAX(id) FROM statuses), 0))`)
     const statusIdMap = {}
     for (const s of STATUSES) {
       const res = await client.query(
