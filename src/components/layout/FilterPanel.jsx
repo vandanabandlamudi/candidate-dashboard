@@ -10,7 +10,7 @@ export function FilterPanel({
   return (
     <div className="bg-white rounded-2xl border border-gray-400 px-4 py-4 flex flex-wrap gap-3 items-end">
       {/* Role */}
-      <div className="flex-1 min-w-40">
+      <div className="flex-1 min-w-0 w-full sm:w-auto sm:min-w-40">
         <label className="block text-xs font-medium text-gray-600 mb-1 ml-1">Role</label>
         <select
           value={selectedRole}
@@ -22,7 +22,7 @@ export function FilterPanel({
       </div>
 
       {/* Status */}
-      <div className="flex-1 min-w-36">
+      <div className="flex-1 min-w-0 w-full sm:w-auto sm:min-w-36">
         <label className="block text-xs font-medium text-gray-600 mb-1 ml-1">Status</label>
         <select
           value={selectedStatus}
@@ -34,7 +34,7 @@ export function FilterPanel({
       </div>
 
       {/* Keyword */}
-      <div className="flex-[2] min-w-48">
+      <div className="flex-[2] min-w-0 w-full sm:w-auto sm:min-w-48">
         <label className="block text-xs font-medium text-gray-600 mb-1 ml-1">
           Keyword Filter{' '}
           <span className="text-gray-400 font-normal">(skills, summary, company)</span>

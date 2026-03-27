@@ -42,7 +42,7 @@ export function AssessmentsScreen({ candidates, onUpdateAssessment, pendingToken
   return (
     <div className="flex flex-1 min-h-0">
       {/* ── Left panel ───────────────────────────────────────── */}
-      <div className="w-80 shrink-0 border-r border-gray-200 bg-white flex flex-col">
+      <div className={`${selected ? 'hidden md:flex' : 'flex'} w-full md:w-80 md:shrink-0 border-r border-gray-200 bg-white flex-col`}>
         <div className="px-4 py-3 border-b border-gray-100">
           <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
             <button
@@ -172,7 +172,16 @@ export function AssessmentsScreen({ candidates, onUpdateAssessment, pendingToken
       </div>
 
       {/* ── Right panel ──────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto bg-gray-50">
+      <div className={`${selected ? 'flex' : 'hidden md:flex'} flex-1 flex-col overflow-y-auto bg-gray-50`}>
+        {/* Back button — mobile only */}
+        {selected && (
+          <button
+            onClick={() => setSelected(null)}
+            className="md:hidden flex items-center gap-2 px-4 py-3 text-xs font-medium text-indigo-600 border-b border-gray-200 bg-white"
+          >
+            ← Back to list
+          </button>
+        )}
         {tab === 'questionnaire' && (
           selectedCandidate ? (
             <AssessmentDetailPanel

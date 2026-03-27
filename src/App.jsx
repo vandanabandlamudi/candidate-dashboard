@@ -47,6 +47,7 @@ export default function App() {
   const [drawerC,        setDrawerC]        = useState(null)
   const [showManageQ,    setShowManageQ]    = useState(false)
   const [detailC,        setDetailC]        = useState(null)
+  const [sidebarOpen,    setSidebarOpen]    = useState(false)
 
   // ── Hooks ──────────────────────────────────────────────────────────────────
   const { toastMessage, showToast } = useToast()
@@ -130,7 +131,6 @@ export default function App() {
     onForward:       handleForward,
     onSchedule:      setScheduleC,
     onVideo:         handleVideo,
-    onDelete:        setDeleteC,
     onViewQuestions: setDrawerC,
     onViewDetail:    setDetailC,
   }
@@ -144,10 +144,12 @@ export default function App() {
         screen={screen}
         onScreenChange={(s) => { setScreen(s); localStorage.setItem('activeScreen', s) }}
         onManageQuestions={() => setShowManageQ(true)}
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
         {/* Header */}
         <Header
           globalSearch={globalSearch}
@@ -155,6 +157,7 @@ export default function App() {
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           screen={screen}
+          onMenuOpen={() => setSidebarOpen(true)}
         />
 
         <main className="flex-1 flex flex-col min-h-0">
@@ -186,7 +189,7 @@ export default function App() {
           )}
 
           {screen === 'hiring' && (
-            <div className="max-w-7xl mx-auto px-6 py-5 space-y-4">
+            <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-5 space-y-4">
               {/* Loading / error states */}
               {loading && (
                 <div className="text-center py-16 text-gray-400">
@@ -383,7 +386,6 @@ export default function App() {
           onForward={handleForward}
           onReject={handleReject}
           onSchedule={setScheduleC}
-          onDelete={setDeleteC}
           onViewQuestions={setDrawerC}
         />
       )}

@@ -46,34 +46,52 @@ const NAV = [
   },
 ]
 
-export function Sidebar({ screen, onScreenChange, onManageQuestions }) {
+export function Sidebar({ screen, onScreenChange, onManageQuestions, open, onClose }) {
   return (
-    <aside className="w-56 shrink-0 bg-white border-r border-gray-200 flex flex-col h-screen sticky top-0">
-      {/* Logo */}
-      <div className="px-5 py-5 border-b border-gray-100">
-        <h1 className="text-base font-bold text-gray-900">AI-Powered Resume Screening</h1>
-        {/* <p className="text-[10px] text-gray-400 mt-0.5">Candidate Dashboard</p> */}
-      </div>
+    <>
+      {/* Mobile overlay */}
+      {open && (
+        <div
+          className="fixed inset-0 bg-black/40 z-20 md:hidden"
+          onClick={onClose}
+        />
+      )}
 
-      {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
-        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest px-2 mb-2">Menu</p>
-        {NAV.map(({ value, label, icon }) => (
-          <button
-            key={value}
-            onClick={() => onScreenChange(value)}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left ${
-              screen === value
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            <span className={screen === value ? 'text-white' : 'text-gray-400'}>{icon}</span>
-            {label}
+      {/* Sidebar */}
+      <aside className={`
+        fixed inset-y-0 left-0 z-30 w-56 bg-white border-r border-gray-200 flex flex-col h-screen transition-transform duration-200
+        md:static md:translate-x-0 md:z-auto md:shrink-0
+        ${open ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        {/* Logo */}
+        <div className="px-5 py-5 border-b border-gray-100 flex items-center justify-between">
+          <h1 className="text-base font-bold text-gray-900">AI-Powered Resume Screening</h1>
+          <button onClick={onClose} className="md:hidden text-gray-400 hover:text-gray-600">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
-        ))}
-      </nav>
+        </div>
 
-    </aside>
+        {/* Nav */}
+        <nav className="flex-1 px-3 py-4 space-y-1">
+          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest px-2 mb-2">Menu</p>
+          {NAV.map(({ value, label, icon }) => (
+            <button
+              key={value}
+              onClick={() => { onScreenChange(value); onClose() }}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left ${
+                screen === value
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <span className={screen === value ? 'text-white' : 'text-gray-400'}>{icon}</span>
+              {label}
+            </button>
+          ))}
+        </nav>
+      </aside>
+    </>
   )
 }

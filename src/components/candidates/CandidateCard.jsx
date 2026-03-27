@@ -13,7 +13,6 @@ export function CandidateCard({
   onStatusChange,
   onSchedule,
   onVideo,
-  onDelete,
   onViewQuestions,
   onViewDetail,
 }) {
@@ -139,7 +138,6 @@ export function CandidateCard({
             candidate={candidate}
             onSchedule={onSchedule}
             onVideo={onVideo}
-            onDelete={onDelete}
           />
         </div>
       </div>

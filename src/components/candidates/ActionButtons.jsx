@@ -1,6 +1,6 @@
-import { IcoCal, IcoVideo, IcoTrash } from '../common/Icons'
+import { IcoCal, IcoVideo } from '../common/Icons'
 
-export function ActionButtons({ candidate, onSchedule, onVideo, onDelete }) {
+export function ActionButtons({ candidate, onSchedule, onVideo }) {
   return (
     <div className="flex items-center gap-1">
       <button
@@ -17,14 +17,6 @@ export function ActionButtons({ candidate, onSchedule, onVideo, onDelete }) {
         className="p-1.5 rounded-lg text-purple-400 hover:bg-purple-50 hover:text-purple-600 transition-colors"
       >
         <IcoVideo />
-      </button>
-
-      <button
-        onClick={() => onDelete(candidate)}
-        title="Archive candidate"
-        className="p-1.5 rounded-lg text-red-300 hover:bg-red-50 hover:text-red-500 transition-colors"
-      >
-        <IcoTrash />
       </button>
     </div>
   )

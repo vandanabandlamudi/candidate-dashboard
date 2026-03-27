@@ -23,7 +23,6 @@ export function CandidateDetailPanel({
   onForward,
   onReject,
   onSchedule,
-  onDelete,
   onViewQuestions,
 }) {
   const [tab,        setTab]        = useState('Profile')
@@ -524,13 +523,7 @@ export function CandidateDetailPanel({
         </div>
 
         {/* ── Footer actions ── */}
-        <div className="border-t border-gray-100 px-6 py-3 flex items-center justify-between bg-gray-50 shrink-0">
-          <button
-            onClick={() => { onDelete(candidate); onClose() }}
-            className="text-xs text-red-500 hover:text-red-700 font-medium"
-          >
-            Archive candidate
-          </button>
+        <div className="border-t border-gray-100 px-6 py-3 flex items-center justify-end bg-gray-50 shrink-0">
           <div className="flex gap-2">
             {showReject ? (
               <button

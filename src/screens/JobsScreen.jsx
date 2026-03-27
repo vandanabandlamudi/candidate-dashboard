@@ -330,7 +330,7 @@ export function JobsScreen({ candidates = [] }) {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-5 space-y-4">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-5 space-y-4">
       {/* Top bar */}
       <div className="flex items-center justify-end gap-4 flex-wrap">
         <button
@@ -344,7 +344,7 @@ export function JobsScreen({ candidates = [] }) {
 
       {/* Filters */}
       <div className="bg-white rounded-2xl border border-gray-200 px-4 py-3 flex flex-wrap gap-3 items-end">
-        <div className="flex-[2] min-w-48">
+        <div className="flex-[2] min-w-0 w-full sm:w-auto sm:min-w-48">
           <label className="block text-xs font-medium text-gray-600 mb-1">Search</label>
           <input
             type="text"
@@ -354,7 +354,7 @@ export function JobsScreen({ candidates = [] }) {
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-300"
           />
         </div>
-        <div className="flex-1 min-w-36">
+        <div className="flex-1 min-w-0 w-full sm:w-auto sm:min-w-36">
           <label className="block text-xs font-medium text-gray-600 mb-1">Type</label>
           <select
             value={typeFilter}

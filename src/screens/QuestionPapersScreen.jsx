@@ -57,7 +57,7 @@ export function QuestionPapersScreen({
     <div className="flex flex-1 min-h-0">
 
       {/* ── Left: paper list ──────────────────────────────────── */}
-      <div className="w-72 shrink-0 border-r border-gray-200 bg-white flex flex-col">
+      <div className={`${selectedId ? 'hidden md:flex' : 'flex'} w-full md:w-72 md:shrink-0 border-r border-gray-200 bg-white flex-col`}>
         <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
           <div>
             <p className="text-xs text-gray-400">{papers.length} paper{papers.length !== 1 ? 's' : ''}</p>
@@ -128,13 +128,21 @@ export function QuestionPapersScreen({
 
       {/* ── Right: detail view ────────────────────────────────── */}
       {selectedPaper ? (
-        <PaperDetailView
-          paper={selectedPaper}
-          onEdit={openBuilder}
-          onAssign={setAssignPaper}
-        />
+        <div className={`${selectedId ? 'flex' : 'hidden md:flex'} flex-1 flex-col min-h-0`}>
+          <button
+            onClick={() => setSelectedId(null)}
+            className="md:hidden flex items-center gap-2 px-4 py-3 text-xs font-medium text-indigo-600 border-b border-gray-200 bg-white shrink-0"
+          >
+            ← Back to list
+          </button>
+          <PaperDetailView
+            paper={selectedPaper}
+            onEdit={openBuilder}
+            onAssign={setAssignPaper}
+          />
+        </div>
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
+        <div className="hidden md:flex flex-1 flex-col items-center justify-center text-gray-400">
           <p className="text-4xl mb-3">📋</p>
           <p className="text-sm font-medium text-gray-500">Select a paper to view questions</p>
           {papers.length === 0 && (

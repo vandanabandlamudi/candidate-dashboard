@@ -22,7 +22,7 @@ function SortableHeader({ field, label, sortField, sortDir, onSort }) {
   )
 }
 
-function TableRow({ c, searchTerm, selected, onToggleSelect, onStatusChange, onSchedule, onVideo, onDelete, onViewQuestions }) {
+function TableRow({ c, searchTerm, selected, onToggleSelect, onStatusChange, onSchedule, onVideo, onViewQuestions }) {
   const [pendingStatus, setPendingStatus] = useState(c.status)
   useEffect(() => { setPendingStatus(c.status) }, [c.status])
   const isDirty = pendingStatus !== c.status
@@ -112,7 +112,6 @@ function TableRow({ c, searchTerm, selected, onToggleSelect, onStatusChange, onS
             candidate={c}
             onSchedule={onSchedule}
             onVideo={onVideo}
-            onDelete={onDelete}
           />
         </div>
       </td>
@@ -128,7 +127,6 @@ export function CandidateTable({
   onStatusChange,
   onSchedule,
   onVideo,
-  onDelete,
   onViewQuestions,
   sortField,
   sortDir,
@@ -169,7 +167,6 @@ export function CandidateTable({
                   onStatusChange={onStatusChange}
                   onSchedule={onSchedule}
                   onVideo={onVideo}
-                  onDelete={onDelete}
                   onViewQuestions={onViewQuestions}
                 />
               ))

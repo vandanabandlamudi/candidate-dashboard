@@ -8,16 +8,27 @@ const SCREEN_TITLE = {
   jobs:        'Job Listings',
 }
 
-export function Header({ screen, globalSearch, onGlobalSearch, viewMode, onViewModeChange }) {
+export function Header({ screen, globalSearch, onGlobalSearch, viewMode, onViewModeChange, onMenuOpen }) {
   return (
-    <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-4">
+    <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3">
+      {/* Hamburger — mobile only */}
+      <button
+        onClick={onMenuOpen}
+        className="md:hidden text-gray-500 hover:text-gray-700 shrink-0"
+        aria-label="Open menu"
+      >
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
       {/* Screen title */}
       <h2 className="text-sm font-bold text-gray-900 shrink-0">{SCREEN_TITLE[screen]}</h2>
 
       {screen === 'hiring' && (
         <>
           {/* Search */}
-          <div className="flex-1 max-w-md relative">
+          <div className="flex-1 relative">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
               <IcoSearch />
             </span>
@@ -39,7 +50,7 @@ export function Header({ screen, globalSearch, onGlobalSearch, viewMode, onViewM
           </div>
 
           {/* View toggle */}
-          <div className="ml-auto flex border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+          <div className="shrink-0 flex border border-gray-200 rounded-xl overflow-hidden shadow-sm">
             {[
               { value: 'card',  label: 'Cards', Icon: IcoGrid },
               { value: 'table', label: 'Table', Icon: IcoList  },
@@ -51,7 +62,7 @@ export function Header({ screen, globalSearch, onGlobalSearch, viewMode, onViewM
                   viewMode === value ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'
                 }`}
               >
-                <Icon /> {label}
+                <Icon /> <span className="hidden sm:inline">{label}</span>
               </button>
             ))}
           </div>

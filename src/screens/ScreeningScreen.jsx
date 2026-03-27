@@ -287,17 +287,15 @@ export function ScreeningScreen({ candidates, onStatusChange }) {
   const allTabSelected = eligibleInTab.length > 0 && eligibleInTab.every((r) => selected.has(r.id))
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-5 space-y-6">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-5 space-y-6 overflow-x-hidden w-full">
 
       {/* ── Header ── */}
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <p className="text-xs text-gray-400">Shortlist candidates against their respective job roles using AI</p>
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-gray-400">Shortlist candidates against their respective job roles using AI</p>
         <button
           onClick={runScreening}
           disabled={loading || candidates.length === 0}
-          className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
         >
           {loading ? (
             <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Shortlisting…</>
