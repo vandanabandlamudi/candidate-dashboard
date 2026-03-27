@@ -302,52 +302,38 @@ export function ScreeningScreen({ candidates, onStatusChange }) {
         </button>
       </div>
 
-      {/* ── Not yet screened — shown before any shortlisting ── */}
+      {/* ── Not yet shortlisted — shown before any shortlisting, grouped by role ── */}
       {!screened && !loading && !error && candidates.length > 0 && (
         <div className="space-y-4">
-          <div className="flex items-center gap-3 py-3 px-4 rounded-xl bg-indigo-50 border border-indigo-100">
-            <span className="text-indigo-500 text-lg">✦</span>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-indigo-800">No shortlisting done yet</p>
-              <p className="text-xs text-indigo-500">{candidates.length} candidates across {[...new Set(candidates.map((c) => c.role))].length} roles ready to be evaluated</p>
-            </div>
-            <div className="flex flex-wrap gap-2 justify-end">
-              {[...new Set(candidates.map((c) => c.role))].map((role) => (
-                <button
-                  key={role}
-                  onClick={() => runScreeningForRole(role)}
-                  disabled={roleLoading !== null}
-                  className="text-xs font-semibold px-3 py-1.5 rounded-xl border border-indigo-200 bg-white text-indigo-600 hover:bg-indigo-100 transition-colors disabled:opacity-50"
-                >
-                  {roleLoading === role ? (
-                    <span className="flex items-center gap-1.5"><div className="w-3 h-3 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" />Shortlisting…</span>
-                  ) : `Shortlist ${role}`}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Show all candidates grouped by role as "not shortlisted" */}
           {[...new Set(candidates.map((c) => c.role))].map((role) => {
             const roleCands = candidates.filter((c) => c.role === role)
             return (
-              <div key={role} className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide whitespace-nowrap">{role}</p>
-                  <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{roleCands.length}</span>
-                  <div className="h-px flex-1 bg-gray-100" />
+              <div key={role} className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+                <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 bg-gray-50">
+                  <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">{role}</p>
+                  <span className="text-[10px] font-bold text-gray-400 bg-gray-200 px-2 py-0.5 rounded-full">{roleCands.length}</span>
+                  <div className="flex-1" />
+                  <button
+                    onClick={() => runScreeningForRole(role)}
+                    disabled={roleLoading !== null}
+                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors disabled:opacity-50 shrink-0"
+                  >
+                    {roleLoading === role ? (
+                      <><div className="w-3 h-3 border-2 border-indigo-400 border-t-indigo-600 rounded-full animate-spin" />Shortlisting…</>
+                    ) : <>✦ Shortlist</>}
+                  </button>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-gray-100">
                   {roleCands.map((c) => (
-                    <div key={c.id} className="flex items-center gap-3 px-4 py-3 rounded-xl border border-dashed border-gray-200 bg-gray-50">
-                      <div className="w-8 h-8 rounded-full bg-gray-200 text-gray-500 text-xs font-bold flex items-center justify-center shrink-0">
+                    <div key={c.id} className="flex items-center gap-3 px-4 py-3 bg-white">
+                      <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 text-xs font-bold flex items-center justify-center shrink-0">
                         {c.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold text-gray-700 truncate">{c.name}</p>
                         <p className="text-[10px] text-gray-400 truncate">{c.title} · {c.company}</p>
                       </div>
-                      <span className="text-[10px] font-medium text-gray-300 bg-gray-100 px-2 py-0.5 rounded-full shrink-0">
+                      <span className="text-[10px] font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full shrink-0">
                         {c.exp}y
                       </span>
                     </div>
@@ -488,46 +474,63 @@ export function ScreeningScreen({ candidates, onStatusChange }) {
             </div>
           )}
 
+          {/* Not yet shortlisted — above results, grouped by role */}
+          {notShortlisted.length > 0 && verdictFilter === 'All' && (() => {
+            const unscreenedRoles = [...new Set(notShortlisted.map((c) => c.role))]
+            return (
+              <div className="space-y-4">
+                {unscreenedRoles.map((role) => {
+                  const group = notShortlisted.filter((c) => c.role === role)
+                  return (
+                    <div key={role} className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+                      <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 bg-gray-50">
+                        <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">{role}</p>
+                        <span className="text-[10px] font-bold text-gray-400 bg-gray-200 px-2 py-0.5 rounded-full">{group.length}</span>
+                        <div className="flex-1" />
+                        <button
+                          onClick={() => runScreeningForRole(role)}
+                          disabled={roleLoading !== null || loading}
+                          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors disabled:opacity-50 shrink-0"
+                        >
+                          {roleLoading === role ? (
+                            <><div className="w-3 h-3 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" />Shortlisting…</>
+                          ) : <>✦ Shortlist</>}
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-gray-100">
+                        {group.map((c) => (
+                          <div key={c.id} className="flex items-center gap-3 px-4 py-3 bg-white">
+                            <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 text-xs font-bold flex items-center justify-center shrink-0">
+                              {c.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-semibold text-gray-700 truncate">{c.name}</p>
+                              <p className="text-[10px] text-gray-400 truncate">{c.title} · {c.company}</p>
+                            </div>
+                            <span className="text-[10px] font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full shrink-0">{c.exp}y</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+                {/* Divider before screened results */}
+                {visibleResults.length > 0 && (
+                  <div className="flex items-center gap-3 pt-2">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Shortlisted</p>
+                    <div className="h-px flex-1 bg-gray-200" />
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+
           {/* Cards grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {visibleResults.map((r) => (
               <CandidateResult key={r.id} r={r} selected={selected.has(r.id)} onToggle={toggleSelect} />
             ))}
           </div>
-
-          {/* Not yet shortlisted */}
-          {notShortlisted.length > 0 && verdictFilter === 'All' && (
-            <div className="space-y-2 pt-2">
-              <div className="flex items-center gap-3">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide whitespace-nowrap">
-                  Not yet shortlisted
-                </p>
-                <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                  {notShortlisted.length}
-                </span>
-                <div className="h-px flex-1 bg-gray-100" />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                {notShortlisted.map((c) => (
-                  <div
-                    key={c.id}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl border border-dashed border-gray-200 bg-gray-50"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-gray-200 text-gray-500 text-xs font-bold flex items-center justify-center shrink-0">
-                      {c.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-gray-700 truncate">{c.name}</p>
-                      <p className="text-[10px] text-gray-400 truncate">{c.title} · {c.company}</p>
-                    </div>
-                    <span className="text-[10px] font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full shrink-0">
-                      {c.role}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
 
