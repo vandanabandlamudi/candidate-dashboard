@@ -33,4 +33,4 @@ export const ALL_ROLES_FILTER = [
 
 export const ALL_STATUSES_FILTER = ['All Statuses', ...STATUSES]
 
-export const PER_PAGE_OPTIONS = [10, 25, 50]
+export const PER_PAGE_OPTIONS = [15, 25, 50]

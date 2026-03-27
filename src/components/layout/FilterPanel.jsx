@@ -7,10 +7,10 @@ export function FilterPanel({
   hasActiveFilters, onClearAll,
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 px-4 py-3 flex flex-wrap gap-3 items-end">
+    <div className="bg-white rounded-2xl border border-gray-400 px-4 py-4 flex flex-wrap gap-3 items-end">
       {/* Role */}
       <div className="flex-1 min-w-40">
-        <label className="block text-xs font-medium text-gray-600 mb-1">Role</label>
+        <label className="block text-xs font-medium text-gray-600 mb-1 ml-1">Role</label>
         <select
           value={selectedRole}
           onChange={(e) => onRoleChange(e.target.value)}
@@ -22,7 +22,7 @@ export function FilterPanel({
 
       {/* Status */}
       <div className="flex-1 min-w-36">
-        <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
+        <label className="block text-xs font-medium text-gray-600 mb-1 ml-1">Status</label>
         <select
           value={selectedStatus}
           onChange={(e) => onStatusChange(e.target.value)}
@@ -34,7 +34,7 @@ export function FilterPanel({
 
       {/* Keyword */}
       <div className="flex-[2] min-w-48">
-        <label className="block text-xs font-medium text-gray-600 mb-1">
+        <label className="block text-xs font-medium text-gray-600 mb-1 ml-1">
           Keyword Filter{' '}
           <span className="text-gray-400 font-normal">(skills, summary, company)</span>
         </label>

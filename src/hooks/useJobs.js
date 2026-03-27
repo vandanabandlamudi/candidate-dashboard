@@ -8,6 +8,7 @@ export function useJobs() {
 
   const fetchJobs = useCallback(() => {
     setLoading(true)
+    setError(null)
     api.getJobs()
       .then(setJobs)
       .catch((err) => setError(err.message))

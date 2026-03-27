@@ -12,7 +12,7 @@ import { useQuestionPapers }  from './hooks/useQuestionPapers'
 // Layout
 import { Header }         from './components/layout/Header'
 import { Sidebar }        from './components/layout/Sidebar'
-import { StatsBar }       from './components/layout/StatsBar'
+import { StatusBar }       from './components/layout/StatusBar'
 import { FilterPanel }    from './components/layout/FilterPanel'
 import { BulkActionBar }  from './components/layout/BulkActionBar'
 
@@ -39,7 +39,7 @@ import { ScreeningScreen }       from './screens/ScreeningScreen'
 
 export default function App() {
   // ── Core state ─────────────────────────────────────────────────────────────
-  const [screen,         setScreen]         = useState('hiring') // 'hiring' | 'assessments' | 'papers'
+  const [screen,         setScreen]         = useState(() => localStorage.getItem('activeScreen') || 'hiring')
   const [viewMode,       setViewMode]       = useState('card')
   const [bulkStatus,     setBulkStatus]     = useState('')
   const [scheduleC,      setScheduleC]      = useState(null)
@@ -52,7 +52,7 @@ export default function App() {
   const { toastMessage, showToast } = useToast()
   const { questionBank, setQuestionBank } = useQuestionBank()
   const {
-    papers, addPaper, updatePaper, deletePaper, manualGrade, submissions, pendingTokens, renewToken,
+    papers, addPaper, updatePaper, deletePaper, submissions, pendingTokens, renewToken,
     importFromDrive, importing, importError,
   } = useQuestionPapers()
 
@@ -141,7 +141,7 @@ export default function App() {
       {/* Sidebar */}
       <Sidebar
         screen={screen}
-        onScreenChange={setScreen}
+        onScreenChange={(s) => { setScreen(s); localStorage.setItem('activeScreen', s) }}
         onManageQuestions={() => setShowManageQ(true)}
       />
 
@@ -201,14 +201,16 @@ export default function App() {
               {!loading && !error && (
               <>
               {/* Stats */}
-              <StatsBar
+              <StatusBar
                 candidates={candidates}
                 selectedRole={selectedRole}
                 activeStatus={selectedStatus}
                 onStatusFilter={(v) => { setSelectedStatus(v); resetPage(); clearSelection() }}
+                onRoleFilter={(v) => { setSelectedRole(v); resetPage(); clearSelection() }}
               />
 
               {/* Filters */}
+              <div className="py-2">
               <FilterPanel
                 selectedRole={selectedRole}     onRoleChange={(v)   => { setSelectedRole(v);   resetPage(); clearSelection() }}
                 selectedStatus={selectedStatus} onStatusChange={(v) => { setSelectedStatus(v); resetPage(); clearSelection() }}
@@ -216,7 +218,7 @@ export default function App() {
                 hasActiveFilters={hasActiveFilters}
                 onClearAll={() => { clearAllFilters(); clearSelection() }}
               />
-
+</div>
               {/* Bulk actions */}
               <BulkActionBar
                 selectedCount={selectedIds.size}

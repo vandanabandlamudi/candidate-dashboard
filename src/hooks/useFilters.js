@@ -13,7 +13,7 @@ export function useFilters(candidates) {
   const [sortField,      setSortField]      = useState(null)   // 'appliedDate' | 'status'
   const [sortDir,        setSortDir]        = useState('asc')  // 'asc' | 'desc'
   const [currentPage,    setCurrentPage]    = useState(1)
-  const [perPage,        setPerPage]        = useState(10)
+  const [perPage,        setPerPage]        = useState(15)
 
   const resetPage = useCallback(() => setCurrentPage(1), [])
 

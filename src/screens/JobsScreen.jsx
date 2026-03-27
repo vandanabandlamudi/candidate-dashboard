@@ -241,8 +241,7 @@ export function JobsScreen({ candidates = [] }) {
       {/* Top bar */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="text-base font-bold text-gray-900">Job Listings</h2>
-          <p className="text-xs text-gray-400 mt-0.5">Darwinbox · {jobs.length} open jobs · click ✦ Screen Candidates to auto-screen with Claude</p>
+          <h2 className="text-xl font-bold text-gray-900">Job Listings</h2>
         </div>
         <button
           onClick={refetch}
