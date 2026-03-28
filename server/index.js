@@ -723,9 +723,37 @@ Sort by score descending.`;
         stream: false,
       }),
     });
+    if (!response.ok) {
+      const errText = await response.text();
+      return res.status(502).json({ error: `Ollama API error (${response.status}): ${errText.slice(0, 200)}` });
+    }
     const data = await response.json();
-    const raw = data.message.content.trim().replace(/```json|```/g, '').trim();
-    const results = JSON.parse(raw);
+    const content = data?.message?.content;
+    if (!content) {
+      return res.status(502).json({ error: `Try again...` });    
+      // return res.status(502).json({ error: `Ollama returned no content. Response: ${JSON.stringify(data).slice(0, 200)}` });
+    }
+    
+    // Extract JSON array from content (may be wrapped in markdown or have extra text)
+    const raw = content.trim().replace(/```json|```/g, '').trim();
+    // Find the first '[' and last ']' to extract the JSON array
+    const start = raw.indexOf('[');
+    const end = raw.lastIndexOf(']');
+    if (start === -1 || end === -1) {
+       return res.status(502).json({ error: `Try again...` });   
+      // return res.status(502).json({ error: `Ollama did not return a JSON array. Content: ${raw.slice(0, 300)}` });
+    }
+    const jsonStr = raw.slice(start, end + 1);
+    let results;
+    try {
+      results = JSON.parse(jsonStr);
+    } catch (parseErr) {
+      return res.status(502).json({ error: `Failed to parse Ollama response as JSON: ${parseErr.message}. Content: ${raw.slice(0, 300)}` });
+    }
+    if (!Array.isArray(results)) {
+       return res.status(502).json({ error: `Try again...` });   
+      // return res.status(502).json({ error: 'Ollama did not return a JSON array' });
+    }
     res.json(results);
   } catch (err) {
     res.status(500).json({ error: err.message });

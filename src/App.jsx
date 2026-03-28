@@ -163,7 +163,19 @@ export default function App() {
         <main className="flex-1 flex flex-col min-h-0">
           {screen === 'jobs' && <JobsScreen candidates={candidates} />}
 
-          {screen === 'screening' && <ScreeningScreen candidates={candidates} onStatusChange={refetch} />}
+          {screen === 'screening' && (
+            <ScreeningScreen
+              candidates={candidates}
+              onStatusChange={refetch}
+              onSchedule={setScheduleC}
+              onVideo={handleVideo}
+              onSendQuestionnaire={(ids) => {
+                clearSelection()
+                ids.forEach((id) => toggleSelect(id))
+                setShowQModal(true)
+              }}
+            />
+          )}
 
           {screen === 'assessments' && (
             <AssessmentsScreen

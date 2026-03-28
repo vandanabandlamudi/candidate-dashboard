@@ -11,41 +11,43 @@ const VERDICT_STYLES = {
 }
 
 
-function CandidateResult({ r, selected, onToggle }) {
+function CandidateResult({ r, selected, onToggle, onSchedule, onVideo, onSendQuestionnaire }) {
   const style = VERDICT_STYLES[r.verdict] || VERDICT_STYLES['Partial Match']
   const alreadyMoved = r.status && r.status !== 'Shortlist'
+
   return (
     <div
       className={`rounded-xl border-2 p-4 space-y-2.5 bg-white transition-all ${
-        alreadyMoved
-          ? 'opacity-60 cursor-default ' + style.border
-          : selected
-          ? 'border-indigo-400 shadow-md cursor-pointer'
-          : style.border + ' hover:border-indigo-200 cursor-pointer'
-      }`}
+        selected
+          ? 'border-indigo-400 shadow-md'
+          : alreadyMoved
+          ? 'border-green-200'
+          : style.border + ' hover:border-indigo-200'
+      } ${!alreadyMoved ? 'cursor-pointer' : ''}`}
       onClick={() => !alreadyMoved && onToggle(r.id)}
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          {/* Checkbox — hidden if already moved to next level */}
-          {!alreadyMoved && (
-            <div className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-colors ${
+          {/* Checkbox — always shown, but only toggleable for non-moved */}
+          <div
+            onClick={(e) => { e.stopPropagation(); onToggle(r.id) }}
+            className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-colors cursor-pointer ${
               selected ? 'bg-indigo-500 border-indigo-500' : 'border-gray-300'
-            }`}>
-              {selected && (
-                <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              )}
-            </div>
-          )}
+            }`}
+          >
+            {selected && (
+              <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            )}
+          </div>
           <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center shrink-0">
             {r.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
           </div>
           <div>
             <p className="text-sm font-semibold text-gray-900">{r.name}</p>
             {alreadyMoved
-              ? <p className="text-[10px] text-indigo-500 font-medium">{r.status}</p>
+              ? <p className="text-[10px] text-green-600 font-medium">✓ {r.status}</p>
               : r.role && <p className="text-[10px] text-gray-400">{r.role}</p>
             }
           </div>
@@ -73,12 +75,53 @@ function CandidateResult({ r, selected, onToggle }) {
           <span className="shrink-0">⚠</span>{r.concern}
         </p>
       )}
+
+      {/* Action buttons — shown only for moved candidates */}
+      {alreadyMoved && (
+        <div
+          className="flex flex-col gap-1.5 pt-1 border-t border-gray-100"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center gap-1 justify-end">
+            {onSchedule && (
+              <button
+                onClick={() => onSchedule(r)}
+                title="Schedule interview"
+                className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors"
+              >
+                🗓 Schedule
+              </button>
+            )}
+            {onVideo && (
+              <button
+                onClick={() => onVideo(r)}
+                title="Copy video link"
+                className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-lg text-purple-600 bg-purple-50 hover:bg-purple-100 transition-colors"
+              >
+                🎥 Video Link
+              </button>
+            )}
+          </div>
+          {onSendQuestionnaire && (
+            <div className="flex items-center gap-2 justify-end">
+              <span className="text-[10px] font-semibold text-green-600">Moved to Screen</span>
+              <button
+                onClick={() => onSendQuestionnaire(new Set([r.id]))}
+                title="Send questionnaire"
+                className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-lg text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors"
+              >
+                📋 Send Questionnaire
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
 
 
-export function ScreeningScreen({ candidates, onStatusChange }) {
+export function ScreeningScreen({ candidates, onStatusChange, onSchedule, onVideo, onSendQuestionnaire }) {
   const [results,    setResults]    = useState({})
   const [loading,    setLoading]    = useState(false)
   const [error,      setError]      = useState(null)
@@ -146,22 +189,39 @@ export function ScreeningScreen({ candidates, onStatusChange }) {
   const screenRoles = async (rolesToScreen) => {
     return Promise.all(
       rolesToScreen.map(async (role) => {
-        const roleCandidates = candidates.filter((c) => c.role === role)
-        const job = jobsMap[role] || { job_title: role, department: role, experience_from: '0', experience_to: '∞', salary_min: null, salary_max: null, employee_type: 'Full Time', is_remote: 0 }
-        const res = await fetch(`${BASE}/api/screen`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ job, candidates: roleCandidates }),
-        })
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.error || 'Shortlisting failed')
+        const allRoleCandidates = candidates.filter((c) => c.role === role)
+        // Skip candidates already beyond Shortlist (Screen, Offer, etc.)
+        const toScreen = allRoleCandidates.filter((c) => !statusById[c.id] || statusById[c.id] === 'Shortlist')
+        const alreadyMoved = allRoleCandidates.filter((c) => statusById[c.id] && statusById[c.id] !== 'Shortlist')
 
-        const nameToId = Object.fromEntries(roleCandidates.map((c) => [c.name.toLowerCase(), c.id]))
-        const enriched = data.map((r) => ({
-          ...r,
-          id: nameToId[r.name?.toLowerCase()] ?? r.id,
-        }))
-        return { role, data: enriched, job, roleCandidates }
+        const job = jobsMap[role] || { job_title: role, department: role, experience_from: '0', experience_to: '∞', salary_min: null, salary_max: null, employee_type: 'Full Time', is_remote: 0 }
+
+        let newData = []
+        if (toScreen.length > 0) {
+          const res = await fetch(`${BASE}/api/screen`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ job, candidates: toScreen }),
+          })
+          const text = await res.text()
+          let parsed
+          try { parsed = JSON.parse(text) } catch (_) {
+            throw new Error(`Server returned non-JSON response (${res.status}): ${text.slice(0, 200)}`)
+          }
+          if (!res.ok) throw new Error(parsed?.error || `Shortlisting failed (${res.status})`)
+
+          const nameToId = Object.fromEntries(toScreen.map((c) => [c.name.toLowerCase(), c.id]))
+          newData = parsed.map((r) => ({
+            ...r,
+            id: nameToId[r.name?.toLowerCase()] ?? r.id,
+          }))
+        }
+
+        // Preserve existing results for already-moved candidates
+        const existingResults = (results[role] || []).filter((r) => alreadyMoved.some((c) => c.id === r.id))
+        const data = [...newData, ...existingResults]
+
+        return { role, data, job, roleCandidates: allRoleCandidates }
       })
     )
   }
@@ -176,20 +236,35 @@ export function ScreeningScreen({ candidates, onStatusChange }) {
     const allRoles = [...new Set(candidates.map((c) => c.role))]
     screenRoles(allRoles)
       .then(async (all) => {
-        const map = {}
-        all.forEach(({ role, data }) => {
-          map[role] = data.map((r) => ({ ...r, status: statusById[r.id] ?? 'Shortlist' }))
-        })
-        setResults(map)
-        setScreened(true)
-
         setSaving(true)
         const flat = all.flatMap(({ data, job }) =>
           data.map((r) => ({ ...r, job_title: job.job_title, department: job.department }))
         )
         try {
           await api.saveScreeningResults(flat)
-        } catch (_) {}
+          // Auto-promote candidates with score >= 85 to Screen
+          const toPromote = flat.filter((r) => r.score >= 85 && (statusById[r.id] === 'Shortlist' || !statusById[r.id]))
+          if (toPromote.length > 0) {
+            await Promise.all(toPromote.map((r) => api.updateCandidate(r.id, { status: 'Screen' })))
+            onStatusChange?.()
+          }
+          const promotedIds = new Set(toPromote.map((r) => r.id))
+          const map = {}
+          all.forEach(({ role, data }) => {
+            map[role] = data.map((r) => ({
+              ...r,
+              status: promotedIds.has(r.id) ? 'Screen' : (statusById[r.id] ?? 'Shortlist'),
+            }))
+          })
+          setResults(map)
+        } catch (_) {
+          const map = {}
+          all.forEach(({ role, data }) => {
+            map[role] = data.map((r) => ({ ...r, status: statusById[r.id] ?? 'Shortlist' }))
+          })
+          setResults(map)
+        }
+        setScreened(true)
         setSaving(false)
       })
       .catch((err) => setError(err.message))
@@ -205,19 +280,31 @@ export function ScreeningScreen({ candidates, onStatusChange }) {
     screenRoles([role])
       .then(async (all) => {
         const { data } = all[0]
-        const enriched = data.map((r) => ({ ...r, status: statusById[r.id] ?? 'Shortlist' }))
-        setResults((prev) => ({ ...prev, [role]: enriched }))
-        setScreened(true)
-        setActiveTab(role)
-
         setSaving(true)
         const flat = all.flatMap(({ data: d, job }) =>
           d.map((r) => ({ ...r, job_title: job.job_title, department: job.department }))
         )
         try {
           await api.saveScreeningResults(flat)
-        } catch (_) {}
+          // Auto-promote candidates with score >= 85 to Screen
+          const toPromote = flat.filter((r) => r.score >= 85 && (statusById[r.id] === 'Shortlist' || !statusById[r.id]))
+          if (toPromote.length > 0) {
+            await Promise.all(toPromote.map((r) => api.updateCandidate(r.id, { status: 'Screen' })))
+            onStatusChange?.()
+          }
+          const promotedIds = new Set(toPromote.map((r) => r.id))
+          const enriched = data.map((r) => ({
+            ...r,
+            status: promotedIds.has(r.id) ? 'Screen' : (statusById[r.id] ?? 'Shortlist'),
+          }))
+          setResults((prev) => ({ ...prev, [role]: enriched }))
+        } catch (_) {
+          const enriched = data.map((r) => ({ ...r, status: statusById[r.id] ?? 'Shortlist' }))
+          setResults((prev) => ({ ...prev, [role]: enriched }))
+        }
         setSaving(false)
+        setScreened(true)
+        setActiveTab(role)
       })
       .catch((err) => setError(err.message))
       .finally(() => setRoleLoading(null))
@@ -247,7 +334,7 @@ export function ScreeningScreen({ candidates, onStatusChange }) {
     try {
       await Promise.all([...selected].map((id) => api.updateCandidate(id, { status: 'Screen' })))
       onStatusChange?.()
-      // Update status in cards so checkbox hides — don't remove the card
+      // Update status in cards — keep them selected so "Send Questionnaire" appears
       setResults((prev) => {
         const next = { ...prev }
         for (const role of Object.keys(next)) {
@@ -285,6 +372,11 @@ export function ScreeningScreen({ candidates, onStatusChange }) {
   const eligibleInTab = visibleResults.filter((r) => !r.status || r.status === 'Shortlist')
   const selectedInTab = eligibleInTab.filter((r) => selected.has(r.id))
   const allTabSelected = eligibleInTab.length > 0 && eligibleInTab.every((r) => selected.has(r.id))
+  // Screen-status candidates selected (for questionnaire)
+  const screenSelected = [...selected].filter((id) => {
+    const found = activeResults.find((r) => r.id === id)
+    return found?.status === 'Screen'
+  })
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-5 space-y-6 overflow-x-hidden w-full">
@@ -516,29 +608,47 @@ export function ScreeningScreen({ candidates, onStatusChange }) {
                   )
                 })}
               </div>
-              {selectedInTab.length > 0 && (
-                <button
-                  onClick={moveToNextLevel}
-                  disabled={moving}
-                  className="flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-xl bg-green-600 text-white hover:bg-green-700 transition-colors shadow-sm disabled:opacity-60"
-                >
-                  {moving ? (
-                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                    </svg>
-                  )}
-                  Move {selectedInTab.length} to Screen
-                </button>
-              )}
+              <div className="flex items-center gap-2 flex-wrap">
+                {selectedInTab.length > 0 && (
+                  <button
+                    onClick={moveToNextLevel}
+                    disabled={moving}
+                    className="flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-xl bg-green-600 text-white hover:bg-green-700 transition-colors shadow-sm disabled:opacity-60"
+                  >
+                    {moving ? (
+                      <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                      </svg>
+                    )}
+                    Move {selectedInTab.length} to Screen
+                  </button>
+                )}
+                {screenSelected.length > 0 && onSendQuestionnaire && (
+                  <button
+                    onClick={() => onSendQuestionnaire(new Set(screenSelected))}
+                    className="flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-sm"
+                  >
+                    📋 Send Questionnaire ({screenSelected.length})
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
           {/* Cards grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {visibleResults.map((r) => (
-              <CandidateResult key={r.id} r={r} selected={selected.has(r.id)} onToggle={toggleSelect} />
+              <CandidateResult
+                key={r.id}
+                r={r}
+                selected={selected.has(r.id)}
+                onToggle={toggleSelect}
+                onSchedule={onSchedule}
+                onVideo={onVideo}
+                onSendQuestionnaire={onSendQuestionnaire}
+              />
             ))}
           </div>
         </div>
