@@ -212,6 +212,7 @@ export function JobsScreen({ candidates = [] }) {
   const { jobs, loading, error, refetch } = useJobs()
   const [search,        setSearch]        = useState('')
   const [typeFilter,    setTypeFilter]    = useState('All')
+  const [empTypeFilter, setEmpTypeFilter] = useState('All')
   const [screenJob,     setScreenJob]     = useState(null)
   const [screenRes,     setScreenRes]     = useState([])
   const [screenLoad,    setScreenLoad]    = useState(false)
@@ -223,14 +224,16 @@ export function JobsScreen({ candidates = [] }) {
     api.getScreeningResults().then(setScreenedRows).catch(() => {})
   }, [])
 
-  const types = ['All', ...new Set(jobs.map((j) => j.employee_type).filter(Boolean))]
+  const types    = ['All', ...new Set(jobs.map((j) => j.job_title).filter(Boolean)).values()].sort((a, b) => a === 'All' ? -1 : a.localeCompare(b))
+  const empTypes = ['All', ...new Set(jobs.map((j) => j.employee_type).filter(Boolean)).values()].sort((a, b) => a === 'All' ? -1 : a.localeCompare(b))
 
   const filtered = jobs.filter((j) => {
-    const matchType   = typeFilter === 'All' || j.employee_type === typeFilter
-    const q           = search.toLowerCase()
-    const matchSearch = !q || [j.job_title, j.department, j.group_company, j.job_code]
+    const matchType    = typeFilter    === 'All' || j.job_title     === typeFilter
+    const matchEmpType = empTypeFilter === 'All' || j.employee_type === empTypeFilter
+    const q            = search.toLowerCase()
+    const matchSearch  = !q || [j.job_title, j.department, j.group_company, j.job_code]
       .some((v) => v?.toLowerCase().includes(q))
-    return matchType && matchSearch
+    return matchType && matchEmpType && matchSearch
   })
 
   // A job matches a candidate role if either string contains the other (case-insensitive)
@@ -355,7 +358,7 @@ export function JobsScreen({ candidates = [] }) {
           />
         </div>
         <div className="flex-1 min-w-0 w-full sm:w-auto sm:min-w-36">
-          <label className="block text-xs font-medium text-gray-600 mb-1">Type</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Job Title</label>
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
@@ -364,6 +367,24 @@ export function JobsScreen({ candidates = [] }) {
             {types.map((t) => <option key={t}>{t}</option>)}
           </select>
         </div>
+        <div className="flex-1 min-w-0 w-full sm:w-auto sm:min-w-36">
+          <label className="block text-xs font-medium text-gray-600 mb-1">Employee Type</label>
+          <select
+            value={empTypeFilter}
+            onChange={(e) => setEmpTypeFilter(e.target.value)}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+          >
+            {empTypes.map((t) => <option key={t}>{t}</option>)}
+          </select>
+        </div>
+        {(search || typeFilter !== 'All' || empTypeFilter !== 'All') && (
+          <button
+            onClick={() => { setSearch(''); setTypeFilter('All'); setEmpTypeFilter('All') }}
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors whitespace-nowrap self-end"
+          >
+            ✕ Clear All
+          </button>
+        )}
       </div>
 
       {loading && (

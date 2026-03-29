@@ -49,7 +49,7 @@ export function useQuestionnaire(candidates, selectedIds, applySentQuestions, cl
 
   // Candidates that are selected AND in Screening stage (where assignments are sent)
   const r1Selected = useMemo(
-    () => candidates.filter((c) => selectedIds.has(c.id) && c.status === 'Screen'),
+    () => candidates.filter((c) => selectedIds.has(c.id) && c.status === 'Shortlist'),
     [candidates, selectedIds]
   )
 

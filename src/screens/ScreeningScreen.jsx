@@ -14,7 +14,7 @@ const VERDICT_STYLES = {
 
 function CandidateResult({ r, candidate, selected, onToggle, onSchedule, onVideo, onSendQuestionnaire, onViewDetail, onStatusChange, onMeetLinkSaved, onInterviewDeleted }) {
   const style = VERDICT_STYLES[r.verdict] || VERDICT_STYLES['Partial Match']
-  const alreadyMoved = r.status && r.status !== 'Shortlist'
+  const alreadyMoved = r.status && r.status !== 'Applied'
 
   // full candidate object for ActionButtons (falls back to r if not found)
   const fullCandidate = candidate ?? r
@@ -87,10 +87,10 @@ function CandidateResult({ r, candidate, selected, onToggle, onSchedule, onVideo
         <div>
           {selected && !alreadyMoved && (
             <button
-              onClick={() => onStatusChange?.(r.id, 'Screen')}
+              onClick={() => onStatusChange?.(r.id, 'Shortlist')}
               className="text-[11px] font-semibold px-3 py-1 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors"
             >
-              Move to Screen
+              Move to Shortlist
             </button>
           )}
         </div>
@@ -106,7 +106,7 @@ function CandidateResult({ r, candidate, selected, onToggle, onSchedule, onVideo
             const hasSent = fullCandidate.sentQuestions?.length > 0
             return (
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-semibold text-green-600">Moved to Screen</span>
+                <span className="text-[10px] font-semibold text-green-600">Moved to Shortlisted</span>
                 {hasSent ? (
                   <>
                     <span className="flex items-center gap-1 text-[11px] font-medium text-green-600 bg-green-50 px-2.5 py-1.5 rounded-lg">
@@ -187,7 +187,7 @@ export function ScreeningScreen({ candidates, candidatesLoading, onStatusChange,
         verdict: r.verdict,
         reasons: r.reasons ?? [],
         concern: r.concern,
-        status:  statusById[r.candidate_id] ?? 'Shortlist',
+        status:  statusById[r.candidate_id] ?? 'Applied',
       })
     })
     return map
@@ -211,8 +211,8 @@ export function ScreeningScreen({ candidates, candidatesLoading, onStatusChange,
       rolesToScreen.map(async (role) => {
         const allRoleCandidates = candidates.filter((c) => c.role === role)
         // Skip candidates already beyond Shortlist (Screen, Offer, etc.)
-        const toScreen = allRoleCandidates.filter((c) => !statusById[c.id] || statusById[c.id] === 'Shortlist')
-        const alreadyMoved = allRoleCandidates.filter((c) => statusById[c.id] && statusById[c.id] !== 'Shortlist')
+        const toScreen = allRoleCandidates.filter((c) => !statusById[c.id] || statusById[c.id] === 'Applied')
+        const alreadyMoved = allRoleCandidates.filter((c) => statusById[c.id] && statusById[c.id] !== 'Applied')
 
         const job = jobsMap[role] || { job_title: role, department: role, experience_from: '0', experience_to: '∞', salary_min: null, salary_max: null, employee_type: 'Full Time', is_remote: 0 }
 
@@ -263,9 +263,9 @@ export function ScreeningScreen({ candidates, candidatesLoading, onStatusChange,
         try {
           await api.saveScreeningResults(flat)
           // Auto-promote candidates with score >= 85 to Screen
-          const toPromote = flat.filter((r) => r.score >= 85 && (statusById[r.id] === 'Shortlist' || !statusById[r.id]))
+          const toPromote = flat.filter((r) => r.score >= 85 && (statusById[r.id] === 'Applied' || !statusById[r.id]))
           if (toPromote.length > 0) {
-            await Promise.all(toPromote.map((r) => api.updateCandidate(r.id, { status: 'Screen' })))
+            await Promise.all(toPromote.map((r) => api.updateCandidate(r.id, { status: 'Shortlist' })))
             onStatusChange?.()
           }
           const promotedIds = new Set(toPromote.map((r) => r.id))
@@ -273,14 +273,14 @@ export function ScreeningScreen({ candidates, candidatesLoading, onStatusChange,
           all.forEach(({ role, data }) => {
             map[role] = data.map((r) => ({
               ...r,
-              status: promotedIds.has(r.id) ? 'Screen' : (statusById[r.id] ?? 'Shortlist'),
+              status: promotedIds.has(r.id) ? 'Shortlist' : (statusById[r.id] ?? 'Applied'),
             }))
           })
           setResults(map)
         } catch (_) {
           const map = {}
           all.forEach(({ role, data }) => {
-            map[role] = data.map((r) => ({ ...r, status: statusById[r.id] ?? 'Shortlist' }))
+            map[role] = data.map((r) => ({ ...r, status: statusById[r.id] ?? 'Applied' }))
           })
           setResults(map)
         }
@@ -307,19 +307,19 @@ export function ScreeningScreen({ candidates, candidatesLoading, onStatusChange,
         try {
           await api.saveScreeningResults(flat)
           // Auto-promote candidates with score >= 85 to Screen
-          const toPromote = flat.filter((r) => r.score >= 85 && (statusById[r.id] === 'Shortlist' || !statusById[r.id]))
+          const toPromote = flat.filter((r) => r.score >= 85 && (statusById[r.id] === 'Applied' || !statusById[r.id]))
           if (toPromote.length > 0) {
-            await Promise.all(toPromote.map((r) => api.updateCandidate(r.id, { status: 'Screen' })))
+            await Promise.all(toPromote.map((r) => api.updateCandidate(r.id, { status: 'Shortlist' })))
             onStatusChange?.()
           }
           const promotedIds = new Set(toPromote.map((r) => r.id))
           const enriched = data.map((r) => ({
             ...r,
-            status: promotedIds.has(r.id) ? 'Screen' : (statusById[r.id] ?? 'Shortlist'),
+            status: promotedIds.has(r.id) ? 'Shortlist' : (statusById[r.id] ?? 'Applied'),
           }))
           setResults((prev) => ({ ...prev, [role]: enriched }))
         } catch (_) {
-          const enriched = data.map((r) => ({ ...r, status: statusById[r.id] ?? 'Shortlist' }))
+          const enriched = data.map((r) => ({ ...r, status: statusById[r.id] ?? 'Applied' }))
           setResults((prev) => ({ ...prev, [role]: enriched }))
         }
         setSaving(false)
@@ -339,7 +339,7 @@ export function ScreeningScreen({ candidates, candidatesLoading, onStatusChange,
   }
 
   const toggleAll = () => {
-    const ids = activeResults.filter((r) => !r.status || r.status === 'Shortlist').map((r) => r.id)
+    const ids = activeResults.filter((r) => !r.status || r.status === 'Applied').map((r) => r.id)
     const allSel = ids.length > 0 && ids.every((id) => selected.has(id))
     setSelected((prev) => {
       const next = new Set(prev)
@@ -352,14 +352,14 @@ export function ScreeningScreen({ candidates, candidatesLoading, onStatusChange,
     if (selected.size === 0) return
     setMoving(true)
     try {
-      await Promise.all([...selected].map((id) => api.updateCandidate(id, { status: 'Screen' })))
+      await Promise.all([...selected].map((id) => api.updateCandidate(id, { status: 'Shortlist' })))
       onStatusChange?.()
       // Update status in cards — keep them selected so "Send Questionnaire" appears
       setResults((prev) => {
         const next = { ...prev }
         for (const role of Object.keys(next)) {
           next[role] = next[role].map((r) =>
-            selected.has(r.id) ? { ...r, status: 'Screen' } : r
+            selected.has(r.id) ? { ...r, status: 'Shortlist' } : r
           )
         }
         return next
@@ -389,13 +389,13 @@ export function ScreeningScreen({ candidates, candidatesLoading, onStatusChange,
 
   const verdictCounts = activeResults.reduce((acc, r) => { acc[r.verdict] = (acc[r.verdict] || 0) + 1; return acc }, {})
   const visibleResults = verdictFilter === 'All' ? activeResults : activeResults.filter((r) => r.verdict === verdictFilter)
-  const eligibleInTab = visibleResults.filter((r) => !r.status || r.status === 'Shortlist')
+  const eligibleInTab = visibleResults.filter((r) => !r.status || r.status === 'Applied')
   const selectedInTab = eligibleInTab.filter((r) => selected.has(r.id))
   const allTabSelected = eligibleInTab.length > 0 && eligibleInTab.every((r) => selected.has(r.id))
   // Screen-status candidates selected (for questionnaire)
   const screenSelected = [...selected].filter((id) => {
     const found = activeResults.find((r) => r.id === id)
-    return found?.status === 'Screen'
+    return found?.status === 'Shortlist'
   })
 
   if (candidatesLoading) return (
@@ -649,7 +649,7 @@ export function ScreeningScreen({ candidates, candidatesLoading, onStatusChange,
                         <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                       </svg>
                     )}
-                    Move {selectedInTab.length} to Screen
+                    Move {selectedInTab.length} to Shortlist
                   </button>
                 )}
                 {screenSelected.length > 0 && onSendQuestionnaire && (

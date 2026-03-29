@@ -1,4 +1,4 @@
-import { ALL_STATUSES_FILTER } from '../../constants/statuses'
+import { ALL_STATUSES_FILTER, STATUS_LABELS } from '../../constants/statuses'
 
 export function FilterPanel({
   roles,
@@ -29,7 +29,9 @@ export function FilterPanel({
           onChange={(e) => onStatusChange(e.target.value)}
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-300"
         >
-          {ALL_STATUSES_FILTER.map((s) => <option key={s}>{s}</option>)}
+          {ALL_STATUSES_FILTER.map((s) => (
+            <option key={s} value={s}>{STATUS_LABELS[s] ?? s}</option>
+          ))}
         </select>
       </div>
 

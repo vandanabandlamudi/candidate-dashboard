@@ -115,7 +115,7 @@ export function useCandidates(showToast) {
   const applySentQuestions = useCallback((selectedIds, previewMap) => {
     setCandidates((prev) =>
       prev.map((c) => {
-        if (!selectedIds.has(c.id) || c.status !== 'Screen') return c
+        if (!selectedIds.has(c.id) || c.status !== 'Shortlist') return c
         const questions = previewMap[c.role] ?? []
         const updated = { ...c, sentQuestions: [...(c.sentQuestions ?? []), ...questions] }
         // Persist to sent_questions table

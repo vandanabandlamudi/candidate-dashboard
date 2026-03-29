@@ -1,13 +1,14 @@
+import { STATUS_LABELS } from '../../constants/statuses'
+
 const STAT_CONFIG = [
-  { key: 'total',  label: 'Total',            color: 'text-gray-800',   bg: 'bg-white',       status: null                },
-  { key: 'short',  label: 'Shortlist',     color: 'text-sky-700',    bg: 'bg-sky-50',      status: 'Shortlist'      },
-  { key: 'screen', label: 'Screen',        color: 'text-yellow-700', bg: 'bg-yellow-50',   status: 'Screen'         },
-  { key: 'ev1',    label: 'Evaluation R1',    color: 'text-blue-700',   bg: 'bg-blue-50',     status: 'In Evaluation R1'  },
-  { key: 'ev2',    label: 'Evaluation R2',    color: 'text-violet-700', bg: 'bg-violet-50',   status: 'In Evaluation R2'  },
-  { key: 'ev3',    label: 'Evaluation R3',    color: 'text-indigo-700', bg: 'bg-indigo-50',   status: 'In Evaluation R3'  },
-  { key: 'offer',  label: 'Offer',            color: 'text-green-700',  bg: 'bg-green-50',    status: 'Offer'             },
-  // { key: 'active', label: 'Active Employees', color: 'text-teal-700',   bg: 'bg-teal-50',     status: 'Active Employees'  },
-  { key: 'reject', label: 'Reject',         color: 'text-red-600',    bg: 'bg-red-50',      status: 'Reject'          },
+  { key: 'total',   label: 'Total',                          color: 'text-gray-800',   bg: 'bg-white',       status: null                 },
+  { key: 'applied', label: STATUS_LABELS['Applied'],          color: 'text-sky-700',    bg: 'bg-sky-50',      status: 'Applied'            },
+  { key: 'short',   label: STATUS_LABELS['Shortlist'],        color: 'text-yellow-700', bg: 'bg-yellow-50',   status: 'Shortlist'          },
+  { key: 'ev1',     label: STATUS_LABELS['In Evaluation R1'], color: 'text-blue-700',   bg: 'bg-blue-50',     status: 'In Evaluation R1'   },
+  { key: 'ev2',     label: STATUS_LABELS['In Evaluation R2'], color: 'text-violet-700', bg: 'bg-violet-50',   status: 'In Evaluation R2'   },
+  { key: 'ev3',     label: STATUS_LABELS['In Evaluation HR'], color: 'text-indigo-700', bg: 'bg-indigo-50',   status: 'In Evaluation HR'   },
+  { key: 'offer',   label: STATUS_LABELS['Offer'],            color: 'text-green-700',  bg: 'bg-green-50',    status: 'Offer'              },
+  { key: 'reject',  label: STATUS_LABELS['Reject'],           color: 'text-red-600',    bg: 'bg-red-50',      status: 'Reject'             },
 ]
 
 const ROLE_COLORS = [
@@ -25,12 +26,12 @@ export function StatusBar({ candidates, selectedRole, activeStatus, onStatusFilt
   const base = selectedRole === 'All Roles' ? candidates : candidates.filter((c) => c.role === selectedRole)
 
   const stats = {
-    total:  base.length,
-    short:  base.filter((c) => c.status === 'Shortlist').length,
-    screen: base.filter((c) => c.status === 'Screen').length,
-    ev1:    base.filter((c) => c.status === 'In Evaluation R1').length,
-    ev2:    base.filter((c) => c.status === 'In Evaluation R2').length,
-    ev3:    base.filter((c) => c.status === 'In Evaluation R3').length,
+    total:   base.length,
+    applied: base.filter((c) => c.status === 'Applied').length,
+    short:   base.filter((c) => c.status === 'Shortlist').length,
+    ev1:     base.filter((c) => c.status === 'In Evaluation R1').length,
+    ev2:     base.filter((c) => c.status === 'In Evaluation R2').length,
+    ev3:     base.filter((c) => c.status === 'In Evaluation HR').length,
     offer:  base.filter((c) => c.status === 'Offer').length,
     // active: base.filter((c) => c.status === 'Active Employees').length,
     reject: base.filter((c) => c.status === 'Reject').length,

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 export function AssignPaperModal({ paper, candidates, submissions, pendingTokens = [], onGetLink, onClose }) {
-  const eligible = candidates.filter((c) => c.role === paper.role && c.status === 'Screen')
+  const eligible = candidates.filter((c) => c.role === paper.role && c.status === 'Shortlist')
   const [linkInfo,    setLinkInfo]    = useState(null)   // { candidateName, url }
   const [generating,  setGenerating]  = useState(false)
   const [genError,    setGenError]    = useState('')

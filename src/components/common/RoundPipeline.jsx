@@ -1,4 +1,4 @@
-const STAGES = ['Shortlist', 'Screen', 'In Evaluation R1', 'In Evaluation R2', 'In Evaluation R3', 'Offer']
+const STAGES = ['Applied', 'Shortlist', 'In Evaluation R1', 'In Evaluation R2', 'In Evaluation HR', 'Offer']
 
 export function RoundPipeline({ status }) {
   const activeIndex = STAGES.indexOf(status)
