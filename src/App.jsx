@@ -173,20 +173,25 @@ export default function App() {
           {screen === 'screening' && (
             <ScreeningScreen
               candidates={candidates}
+              candidatesLoading={loading}
               onStatusChange={refetch}
               onSchedule={setScheduleC}
               onVideo={handleVideo}
+              onViewDetail={(r) => setDetailC(candidates.find((c) => c.id === r.id) ?? r)}
               onSendQuestionnaire={(ids) => {
                 clearSelection()
                 ids.forEach((id) => toggleSelect(id))
                 setShowQModal(true)
               }}
+              onMeetLinkSaved={handleMeetLinkSaved}
+              onInterviewDeleted={handleInterviewDeleted}
             />
           )}
 
           {screen === 'assessments' && (
             <AssessmentsScreen
               candidates={candidates}
+              loading={loading}
               onUpdateAssessment={updateAssessment}
               pendingTokens={pendingTokens}
             />
@@ -196,6 +201,7 @@ export default function App() {
             <QuestionPapersScreen
               papers={papers}
               candidates={candidates}
+              loading={loading}
               submissions={submissions}
               pendingTokens={pendingTokens}
               onAddPaper={addPaper}
@@ -218,7 +224,7 @@ export default function App() {
               {error && (
                 <div className="text-center py-16 text-red-400">
                   <p className="text-base font-medium">Failed to load candidates: {error}</p>
-                  <p className="text-sm mt-1 text-gray-400">Make sure the backend server is running on port 3001.</p>
+                  <p className="text-sm mt-1 text-gray-400">Try again ...</p>
                 </div>
               )}
               {!loading && !error && (

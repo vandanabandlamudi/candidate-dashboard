@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { api } from '../api/client.js'
+import { ActionButtons } from '../components/candidates/ActionButtons'
 
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
@@ -11,117 +12,136 @@ const VERDICT_STYLES = {
 }
 
 
-function CandidateResult({ r, selected, onToggle, onSchedule, onVideo, onSendQuestionnaire }) {
+function CandidateResult({ r, candidate, selected, onToggle, onSchedule, onVideo, onSendQuestionnaire, onViewDetail, onStatusChange, onMeetLinkSaved, onInterviewDeleted }) {
   const style = VERDICT_STYLES[r.verdict] || VERDICT_STYLES['Partial Match']
   const alreadyMoved = r.status && r.status !== 'Shortlist'
 
+  // full candidate object for ActionButtons (falls back to r if not found)
+  const fullCandidate = candidate ?? r
+
   return (
     <div
-      className={`rounded-xl border-2 p-4 space-y-2.5 bg-white transition-all ${
+      className={`rounded-xl border-2 bg-white transition-all overflow-hidden flex flex-col cursor-pointer ${
         selected
           ? 'border-indigo-400 shadow-md'
           : alreadyMoved
-          ? 'border-green-200'
+          ? 'border-green-200 hover:border-green-300'
           : style.border + ' hover:border-indigo-200'
-      } ${!alreadyMoved ? 'cursor-pointer' : ''}`}
-      onClick={() => !alreadyMoved && onToggle(r.id)}
+      }`}
+      onClick={() => onViewDetail?.(r)}
     >
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          {/* Checkbox — always shown, but only toggleable for non-moved */}
-          <div
-            onClick={(e) => { e.stopPropagation(); onToggle(r.id) }}
-            className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-colors cursor-pointer ${
-              selected ? 'bg-indigo-500 border-indigo-500' : 'border-gray-300'
-            }`}
-          >
-            {selected && (
-              <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            )}
-          </div>
-          <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center shrink-0">
-            {r.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-900">{r.name}</p>
-            {alreadyMoved
-              ? <p className="text-[10px] text-green-600 font-medium">✓ {r.status}</p>
-              : r.role && <p className="text-[10px] text-gray-400">{r.role}</p>
-            }
-          </div>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${style.badge}`}>{r.verdict}</span>
-          <span className="text-sm font-bold text-gray-700">{r.score}/100</span>
-        </div>
-      </div>
-
-      <div className="w-full bg-gray-100 rounded-full h-1.5">
-        <div className={`h-1.5 rounded-full transition-all ${style.bar}`} style={{ width: `${r.score}%` }} />
-      </div>
-
-      <ul className="space-y-0.5">
-        {r.reasons.map((reason, i) => (
-          <li key={i} className="text-[11px] text-gray-600 flex gap-1.5">
-            <span className="text-green-500 shrink-0">✓</span>{reason}
-          </li>
-        ))}
-      </ul>
-
-      {r.concern && (
-        <p className="text-[11px] text-amber-700 bg-amber-50 rounded-lg px-3 py-1.5 flex gap-1.5">
-          <span className="shrink-0">⚠</span>{r.concern}
-        </p>
-      )}
-
-      {/* Action buttons — shown only for moved candidates */}
-      {alreadyMoved && (
-        <div
-          className="flex flex-col gap-1.5 pt-1 border-t border-gray-100"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex items-center gap-1 justify-end">
-            {onSchedule && (
-              <button
-                onClick={() => onSchedule(r)}
-                title="Schedule interview"
-                className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors"
-              >
-                🗓 Schedule
-              </button>
-            )}
-            {onVideo && (
-              <button
-                onClick={() => onVideo(r)}
-                title="Copy video link"
-                className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-lg text-purple-600 bg-purple-50 hover:bg-purple-100 transition-colors"
-              >
-                🎥 Video Link
-              </button>
-            )}
-          </div>
-          {onSendQuestionnaire && (
-            <div className="flex items-center gap-2 justify-end">
-              <span className="text-[10px] font-semibold text-green-600">Moved to Screen</span>
-              <button
-                onClick={() => onSendQuestionnaire(new Set([r.id]))}
-                title="Send questionnaire"
-                className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-lg text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors"
-              >
-                📋 Send Questionnaire
-              </button>
+      <div className="p-4 flex-1 space-y-2.5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            {/* Checkbox — stop propagation so it doesn't open detail */}
+            <div
+              onClick={(e) => { e.stopPropagation(); onToggle(r.id) }}
+              className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-colors cursor-pointer ${
+                selected ? 'bg-indigo-500 border-indigo-500' : 'border-gray-300'
+              }`}
+            >
+              {selected && (
+                <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              )}
             </div>
+            <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center shrink-0">
+              {r.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-900">{r.name}</p>
+              {alreadyMoved
+                ? <p className="text-[10px] text-green-600 font-medium">✓ {r.status}</p>
+                : r.role && <p className="text-[10px] text-gray-400">{r.role}</p>
+              }
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+            <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${style.badge}`}>{r.verdict}</span>
+            <span className="text-sm font-bold text-gray-700">{r.score}/100</span>
+          </div>
+        </div>
+
+        <div className="w-full bg-gray-100 rounded-full h-1.5">
+          <div className={`h-1.5 rounded-full transition-all ${style.bar}`} style={{ width: `${r.score}%` }} />
+        </div>
+
+        <ul className="space-y-0.5">
+          {r.reasons.map((reason, i) => (
+            <li key={i} className="text-[11px] text-gray-600 flex gap-1.5">
+              <span className="text-green-500 shrink-0">✓</span>{reason}
+            </li>
+          ))}
+        </ul>
+
+        {r.concern && (
+          <p className="text-[11px] text-amber-700 bg-amber-50 rounded-lg px-3 py-1.5 flex gap-1.5">
+            <span className="shrink-0">⚠</span>{r.concern}
+          </p>
+        )}
+      </div>
+
+      {/* Card footer */}
+      <div className="border-t border-gray-100 px-4 py-2 flex items-center justify-between bg-gray-50" onClick={(e) => e.stopPropagation()}>
+        <div>
+          {selected && !alreadyMoved && (
+            <button
+              onClick={() => onStatusChange?.(r.id, 'Screen')}
+              className="text-[11px] font-semibold px-3 py-1 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors"
+            >
+              Move to Screen
+            </button>
           )}
         </div>
-      )}
+        <div className="flex flex-col items-end gap-1">
+          <ActionButtons
+            candidate={fullCandidate}
+            onSchedule={onSchedule}
+            onVideo={onVideo}
+            onMeetLinkSaved={onMeetLinkSaved}
+            onInterviewDeleted={onInterviewDeleted}
+          />
+          {alreadyMoved && onSendQuestionnaire && (() => {
+            const hasSent = fullCandidate.sentQuestions?.length > 0
+            return (
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-semibold text-green-600">Moved to Screen</span>
+                {hasSent ? (
+                  <>
+                    <span className="flex items-center gap-1 text-[11px] font-medium text-green-600 bg-green-50 px-2.5 py-1.5 rounded-lg">
+                      ✅ Questions Sent
+                    </span>
+                    <button
+                      onClick={() => onSendQuestionnaire(new Set([r.id]))}
+                      title="Resend questionnaire"
+                      className="p-1.5 rounded-lg border border-gray-200 text-gray-400 hover:border-indigo-300 hover:text-indigo-600 transition-colors"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => onSendQuestionnaire(new Set([r.id]))}
+                    title="Send questionnaire"
+                    className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-lg text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors"
+                  >
+                    📋 Send Questionnaire
+                  </button>
+                )}
+              </div>
+            )
+          })()}
+        </div>
+      </div>
     </div>
   )
 }
 
 
-export function ScreeningScreen({ candidates, onStatusChange, onSchedule, onVideo, onSendQuestionnaire }) {
+export function ScreeningScreen({ candidates, candidatesLoading, onStatusChange, onSchedule, onVideo, onSendQuestionnaire, onViewDetail, onMeetLinkSaved, onInterviewDeleted }) {
   const [results,    setResults]    = useState({})
   const [loading,    setLoading]    = useState(false)
   const [error,      setError]      = useState(null)
@@ -377,6 +397,13 @@ export function ScreeningScreen({ candidates, onStatusChange, onSchedule, onVide
     const found = activeResults.find((r) => r.id === id)
     return found?.status === 'Screen'
   })
+
+  if (candidatesLoading) return (
+    <div className="flex items-center justify-center h-64 text-gray-400">
+      <div className="w-6 h-6 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mr-3" />
+      <p className="text-sm font-medium">Loading candidates…</p>
+    </div>
+  )
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-5 space-y-6 overflow-x-hidden w-full">
@@ -643,11 +670,26 @@ export function ScreeningScreen({ candidates, onStatusChange, onSchedule, onVide
               <CandidateResult
                 key={r.id}
                 r={r}
+                candidate={candidates.find((c) => c.id === r.id)}
                 selected={selected.has(r.id)}
                 onToggle={toggleSelect}
                 onSchedule={onSchedule}
                 onVideo={onVideo}
                 onSendQuestionnaire={onSendQuestionnaire}
+                onViewDetail={onViewDetail}
+                onStatusChange={async (id, status) => {
+                  await api.updateCandidate(id, { status })
+                  onStatusChange?.()
+                  setResults((prev) => {
+                    const next = { ...prev }
+                    for (const role of Object.keys(next)) {
+                      next[role] = next[role].map((c) => c.id === id ? { ...c, status } : c)
+                    }
+                    return next
+                  })
+                }}
+                onMeetLinkSaved={onMeetLinkSaved}
+                onInterviewDeleted={onInterviewDeleted}
               />
             ))}
           </div>

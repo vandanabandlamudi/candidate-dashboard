@@ -15,6 +15,7 @@ const ROLE_COLOR = {
 
 export function QuestionPapersScreen({
   papers, candidates, submissions, pendingTokens = [],
+  loading,
   onAddPaper, onUpdatePaper, onDeletePaper,
   onImportFromDrive, importing, importError,
 }) {
@@ -51,6 +52,13 @@ export function QuestionPapersScreen({
       />
     )
   }
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-64 text-gray-400">
+      <div className="w-6 h-6 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mr-3" />
+      <p className="text-sm font-medium">Loading candidates…</p>
+    </div>
+  )
 
   // ── Split-panel list view ──────────────────────────────────────────────────
   return (

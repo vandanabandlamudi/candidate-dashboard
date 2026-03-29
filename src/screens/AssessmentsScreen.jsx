@@ -29,7 +29,7 @@ function avgScore(assessments) {
   return scored.reduce((s, a) => s + a.score, 0) / scored.length
 }
 
-export function AssessmentsScreen({ candidates, onUpdateAssessment, pendingTokens = [] }) {
+export function AssessmentsScreen({ candidates, loading, onUpdateAssessment, pendingTokens = [] }) {
   const [tab,      setTab]     = useState('questionnaire')
   const [selected, setSelected] = useState(null)
 
@@ -38,6 +38,13 @@ export function AssessmentsScreen({ candidates, onUpdateAssessment, pendingToken
   const selectedCandidate = assessed.find((c) => c.id === selected) ?? null
 
   const switchTab = (t) => { setTab(t); setSelected(null) }
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-64 text-gray-400">
+      <div className="w-6 h-6 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mr-3" />
+      <p className="text-sm font-medium">Loading candidates…</p>
+    </div>
+  )
 
   return (
     <div className="flex flex-1 min-h-0">
