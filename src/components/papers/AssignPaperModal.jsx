@@ -1,7 +1,20 @@
 import { useState } from 'react'
 
 export function AssignPaperModal({ paper, candidates, submissions, pendingTokens = [], onGetLink, onClose }) {
-  const eligible = candidates.filter((c) => c.role === paper.role && c.status === 'Shortlist')
+  if (!paper) return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-3">
+        <h2 className="text-base font-bold text-gray-900">No Question Paper Found</h2>
+        <p className="text-sm text-gray-500">No question paper has been imported for this role yet. Go to <strong>Question Papers</strong> and import one from Google Drive first.</p>
+        <button onClick={onClose} className="w-full text-sm font-medium py-2 rounded-xl border border-gray-200 hover:bg-gray-50">Close</button>
+      </div>
+    </div>
+  )
+
+  const eligible = candidates.length === 1
+    ? candidates
+    : candidates.filter((c) => c.role === paper.role && c.status === 'Shortlist')
   const [linkInfo,    setLinkInfo]    = useState(null)   // { candidateName, url }
   const [generating,  setGenerating]  = useState(false)
   const [genError,    setGenError]    = useState('')

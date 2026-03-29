@@ -1,8 +1,7 @@
 import { STATUS_LABELS } from '../../constants/statuses'
 
 const STAT_CONFIG = [
-  { key: 'total',   label: 'Total',                          color: 'text-gray-800',   bg: 'bg-white',       status: null                 },
-  { key: 'applied', label: STATUS_LABELS['Applied'],          color: 'text-sky-700',    bg: 'bg-sky-50',      status: 'Applied'            },
+  { key: 'total',   label: STATUS_LABELS['Applied'],          color: 'text-sky-700',    bg: 'bg-sky-50',      status: 'Applied'            },
   { key: 'short',   label: STATUS_LABELS['Shortlist'],        color: 'text-yellow-700', bg: 'bg-yellow-50',   status: 'Shortlist'          },
   { key: 'ev1',     label: STATUS_LABELS['In Evaluation R1'], color: 'text-blue-700',   bg: 'bg-blue-50',     status: 'In Evaluation R1'   },
   { key: 'ev2',     label: STATUS_LABELS['In Evaluation R2'], color: 'text-violet-700', bg: 'bg-violet-50',   status: 'In Evaluation R2'   },
@@ -26,8 +25,7 @@ export function StatusBar({ candidates, selectedRole, activeStatus, onStatusFilt
   const base = selectedRole === 'All Roles' ? candidates : candidates.filter((c) => c.role === selectedRole)
 
   const stats = {
-    total:   base.length,
-    applied: base.filter((c) => c.status === 'Applied').length,
+    total:   base.filter((c) => c.status === 'Applied').length,
     short:   base.filter((c) => c.status === 'Shortlist').length,
     ev1:     base.filter((c) => c.status === 'In Evaluation R1').length,
     ev2:     base.filter((c) => c.status === 'In Evaluation R2').length,

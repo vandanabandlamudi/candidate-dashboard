@@ -178,13 +178,12 @@ export default function App() {
               onSchedule={setScheduleC}
               onVideo={handleVideo}
               onViewDetail={(r) => setDetailC(candidates.find((c) => c.id === r.id) ?? r)}
-              onSendQuestionnaire={(ids) => {
-                clearSelection()
-                ids.forEach((id) => toggleSelect(id))
-                setShowQModal(true)
-              }}
               onMeetLinkSaved={handleMeetLinkSaved}
               onInterviewDeleted={handleInterviewDeleted}
+              papers={papers}
+              submissions={submissions}
+              pendingTokens={pendingTokens}
+              onGetLink={renewToken}
             />
           )}
 

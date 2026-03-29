@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { api } from '../api/client.js'
 import { ActionButtons } from '../components/candidates/ActionButtons'
+import { AssignPaperModal } from '../components/papers/AssignPaperModal'
+import { STATUS_LABELS } from '../constants/statuses'
 
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
@@ -12,7 +14,7 @@ const VERDICT_STYLES = {
 }
 
 
-function CandidateResult({ r, candidate, selected, onToggle, onSchedule, onVideo, onSendQuestionnaire, onViewDetail, onStatusChange, onMeetLinkSaved, onInterviewDeleted }) {
+function CandidateResult({ r, candidate, selected, onToggle, onSchedule, onVideo, onAssignPaper, onViewDetail, onStatusChange, onMeetLinkSaved, onInterviewDeleted }) {
   const style = VERDICT_STYLES[r.verdict] || VERDICT_STYLES['Partial Match']
   const alreadyMoved = r.status && r.status !== 'Applied'
 
@@ -52,7 +54,7 @@ function CandidateResult({ r, candidate, selected, onToggle, onSchedule, onVideo
             <div>
               <p className="text-sm font-semibold text-gray-900">{r.name}</p>
               {alreadyMoved
-                ? <p className="text-[10px] text-green-600 font-medium">✓ {r.status}</p>
+                ? <p className="text-[10px] text-green-600 font-medium">✓ {STATUS_LABELS[r.status] ?? r.status}</p>
                 : r.role && <p className="text-[10px] text-gray-400">{r.role}</p>
               }
             </div>
@@ -102,38 +104,18 @@ function CandidateResult({ r, candidate, selected, onToggle, onSchedule, onVideo
             onMeetLinkSaved={onMeetLinkSaved}
             onInterviewDeleted={onInterviewDeleted}
           />
-          {alreadyMoved && onSendQuestionnaire && (() => {
-            const hasSent = fullCandidate.sentQuestions?.length > 0
-            return (
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-semibold text-green-600">Moved to Shortlisted</span>
-                {hasSent ? (
-                  <>
-                    <span className="flex items-center gap-1 text-[11px] font-medium text-green-600 bg-green-50 px-2.5 py-1.5 rounded-lg">
-                      ✅ Questions Sent
-                    </span>
-                    <button
-                      onClick={() => onSendQuestionnaire(new Set([r.id]))}
-                      title="Resend questionnaire"
-                      className="p-1.5 rounded-lg border border-gray-200 text-gray-400 hover:border-indigo-300 hover:text-indigo-600 transition-colors"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={() => onSendQuestionnaire(new Set([r.id]))}
-                    title="Send questionnaire"
-                    className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-lg text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors"
-                  >
-                    📋 Send Questionnaire
-                  </button>
-                )}
-              </div>
-            )
-          })()}
+          {alreadyMoved && onAssignPaper && (
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-semibold text-green-600">Moved to Shortlisted</span>
+              <button
+                onClick={() => onAssignPaper(fullCandidate)}
+                title="Assign question paper"
+                className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-lg text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors"
+              >
+                📋 Send Questionnaire
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -141,7 +123,7 @@ function CandidateResult({ r, candidate, selected, onToggle, onSchedule, onVideo
 }
 
 
-export function ScreeningScreen({ candidates, candidatesLoading, onStatusChange, onSchedule, onVideo, onSendQuestionnaire, onViewDetail, onMeetLinkSaved, onInterviewDeleted }) {
+export function ScreeningScreen({ candidates, candidatesLoading, onStatusChange, onSchedule, onVideo, onViewDetail, onMeetLinkSaved, onInterviewDeleted, papers = [], submissions = {}, pendingTokens = [], onGetLink }) {
   const [results,    setResults]    = useState({})
   const [loading,    setLoading]    = useState(false)
   const [error,      setError]      = useState(null)
@@ -152,6 +134,7 @@ export function ScreeningScreen({ candidates, candidatesLoading, onStatusChange,
   const [saving,     setSaving]     = useState(false)
   const [verdictFilter, setVerdictFilter] = useState('All')
   const [jobsMap,    setJobsMap]    = useState({})
+  const [assignModal, setAssignModal] = useState(null) // { candidate, paper }
 
   // Fetch real job data on mount — keyed by job_title for quick lookup
   useEffect(() => {
@@ -652,9 +635,13 @@ export function ScreeningScreen({ candidates, candidatesLoading, onStatusChange,
                     Move {selectedInTab.length} to Shortlist
                   </button>
                 )}
-                {screenSelected.length > 0 && onSendQuestionnaire && (
+                {screenSelected.length > 0 && papers.length > 0 && (
                   <button
-                    onClick={() => onSendQuestionnaire(new Set(screenSelected))}
+                    onClick={() => {
+                      const c = candidates.find((x) => x.id === screenSelected[0])
+                      const paper = papers.find((p) => p.role === c?.role) ?? papers[0]
+                      setAssignModal({ candidate: c, paper })
+                    }}
                     className="flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-sm"
                   >
                     📋 Send Questionnaire ({screenSelected.length})
@@ -675,7 +662,10 @@ export function ScreeningScreen({ candidates, candidatesLoading, onStatusChange,
                 onToggle={toggleSelect}
                 onSchedule={onSchedule}
                 onVideo={onVideo}
-                onSendQuestionnaire={onSendQuestionnaire}
+                onAssignPaper={(c) => {
+                  const paper = papers.find((p) => p.role === c.role) ?? papers[0] ?? null
+                  setAssignModal({ candidate: c, paper })
+                }}
                 onViewDetail={onViewDetail}
                 onStatusChange={async (id, status) => {
                   await api.updateCandidate(id, { status })
@@ -696,6 +686,16 @@ export function ScreeningScreen({ candidates, candidatesLoading, onStatusChange,
         </div>
       )}
 
+      {assignModal && (
+        <AssignPaperModal
+          paper={assignModal.paper}
+          candidates={[assignModal.candidate]}
+          submissions={submissions}
+          pendingTokens={pendingTokens}
+          onGetLink={(c) => onGetLink(assignModal.paper.id, c.id)}
+          onClose={() => setAssignModal(null)}
+        />
+      )}
     </div>
   )
 }
