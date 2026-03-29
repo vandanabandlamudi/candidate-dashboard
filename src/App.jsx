@@ -36,6 +36,7 @@ import { AssessmentsScreen }     from './screens/AssessmentsScreen'
 import { QuestionPapersScreen }  from './screens/QuestionPapersScreen'
 import { JobsScreen }            from './screens/JobsScreen'
 import { ScreeningScreen }       from './screens/ScreeningScreen'
+// import { SettingsScreen }        from './screens/SettingsScreen'
 
 export default function App() {
   // ── Core state ─────────────────────────────────────────────────────────────
@@ -68,6 +69,8 @@ export default function App() {
     handleSchedule,
     handleVideo,
     handleDelete,
+    handleMeetLinkSaved,
+    handleInterviewDeleted,
     applySentQuestions,
     updateAssessment,
   } = useCandidates(showToast)
@@ -127,18 +130,20 @@ export default function App() {
 
   // ── Shared props for card & table ──────────────────────────────────────────
   const candidateHandlers = {
-    onStatusChange:  handleStatusChange,
-    onForward:       handleForward,
-    onSchedule:      setScheduleC,
-    onVideo:         handleVideo,
-    onViewQuestions: setDrawerC,
-    onViewDetail:    setDetailC,
+    onStatusChange:   handleStatusChange,
+    onForward:        handleForward,
+    onSchedule:       setScheduleC,
+    onVideo:          handleVideo,
+    onViewQuestions:  setDrawerC,
+    onViewDetail:     setDetailC,
+    onMeetLinkSaved:      handleMeetLinkSaved,
+    onInterviewDeleted:   handleInterviewDeleted,
   }
 
   const searchTerm = globalSearch || keyword
 
   return (
-    <div className="flex min-h-screen bg-gray-50 font-sans">
+    <div className="flex h-screen overflow-hidden bg-gray-50 font-sans">
       {/* Sidebar */}
       <Sidebar
         screen={screen}
@@ -149,7 +154,7 @@ export default function App() {
       />
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
+      <div className="flex-1 flex flex-col min-w-0 md:ml-56 h-screen">
         {/* Header */}
         <Header
           globalSearch={globalSearch}
@@ -160,7 +165,9 @@ export default function App() {
           onMenuOpen={() => setSidebarOpen(true)}
         />
 
-        <main className="flex-1 flex flex-col min-h-0">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden">
+          {/* {screen === 'settings' && <SettingsScreen />} */}
+
           {screen === 'jobs' && <JobsScreen candidates={candidates} />}
 
           {screen === 'screening' && (

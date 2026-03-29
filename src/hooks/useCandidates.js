@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { api } from '../api/client'
 import { FORWARD_MAP } from '../constants/statuses'
-import { getVideoLink } from '../utils/helpers'
 
 /**
  * Manages all candidate state and mutation handlers.
@@ -66,29 +65,36 @@ export function useCandidates(showToast) {
 
   const handleSchedule = useCallback(
     (candidate, interviewData) => {
-      updateCandidate(candidate.id, { interview: interviewData })
-      // Also persist interview to backend
-      api.createInterview(candidate.id, interviewData).catch((err) => {
-        showToast(`Error saving interview: ${err.message}`)
-      })
-      showToast(
-        `Interview scheduled for ${candidate.name} on ${interviewData.date} at ${interviewData.time} · ${interviewData.type}`
+      api.createInterview(candidate.id, interviewData)
+        .then(() => fetchCandidates())
+        .catch((err) => { showToast(`Error saving interview: ${err.message}`) })
+
+      // Build a Google Calendar event URL for all interview types
+      const typeLabel = interviewData.type === 'Video Call' ? '🎥 Video Call'
+        : interviewData.type === 'Phone' ? '📞 Phone Interview'
+        : '🏢 In-Person Interview'
+      const title   = encodeURIComponent(`Interview – ${candidate.name} (${candidate.role})`)
+      const details = encodeURIComponent(
+        `Interview Type: ${typeLabel}\nCandidate: ${candidate.name}\nRole: ${candidate.role}\nEmail: ${candidate.email || 'N/A'}\n\nScheduled via AI-Powered Resume Screening dashboard.`
       )
+      const guests   = candidate.email ? encodeURIComponent(candidate.email) : ''
+      const startStr = `${interviewData.date.replace(/-/g, '')}T${interviewData.time.replace(':', '')}00`
+      const [h, m]   = interviewData.time.split(':').map(Number)
+      const endH     = String(h + 1).padStart(2, '0')
+      const endStr   = `${interviewData.date.replace(/-/g, '')}T${endH}${String(m).padStart(2, '0')}00`
+      const calUrl   = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startStr}/${endStr}&details=${details}&add=${guests}&sf=true&output=xml`
+      window.open(calUrl, '_blank')
+      showToast(`Calendar event created for ${candidate.name}`)
     },
     [updateCandidate, showToast]
   )
 
   const handleVideo = useCallback(
-    (candidate) => {
-      const link = getVideoLink(candidate.id)
-      try {
-        navigator.clipboard.writeText(link)
-      } catch {
-        // clipboard not available in all environments
-      }
-      showToast(`Link copied: ${link}`)
+    () => {
+      // Opens a real Google Meet — user copies the link from there
+      window.open('https://meet.google.com/new', '_blank')
     },
-    [showToast]
+    []
   )
 
   const handleDelete = useCallback(
@@ -139,6 +145,14 @@ export function useCandidates(showToast) {
     api.upsertAssessment(candidateId, { questionId, score, notes }).catch(() => {})
   }, [])
 
+  const handleMeetLinkSaved = useCallback((id, meetLink) => {
+    setCandidates((prev) => prev.map((c) => c.id === id ? { ...c, meetLink } : c))
+  }, [])
+
+  const handleInterviewDeleted = useCallback((id) => {
+    setCandidates((prev) => prev.map((c) => c.id === id ? { ...c, interviewDate: null, interviewTime: null, interviewType: null, meetLink: null } : c))
+  }, [])
+
   return {
     candidates,
     loading,
@@ -150,6 +164,8 @@ export function useCandidates(showToast) {
     handleSchedule,
     handleVideo,
     handleDelete,
+    handleMeetLinkSaved,
+    handleInterviewDeleted,
     applySentQuestions,
     updateAssessment,
   }

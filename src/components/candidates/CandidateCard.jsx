@@ -15,6 +15,8 @@ export function CandidateCard({
   onVideo,
   onViewQuestions,
   onViewDetail,
+  onMeetLinkSaved,
+  onInterviewDeleted,
 }) {
   const [expanded,      setExpanded]      = useState(false)
   const [pendingStatus, setPendingStatus] = useState(candidate.status)
@@ -89,11 +91,6 @@ export function CandidateCard({
           <span>🎯 {candidate.role}</span>
           <span>⏱ {candidate.exp}y</span>
           <span>📅 {fmtDate(candidate.appliedDate)}</span>
-          {candidate.interview && (
-            <span className="text-blue-500 font-medium">
-              🗓 {fmtDate(candidate.interview.date)} {candidate.interview.time}
-            </span>
-          )}
         </div>
 
         {hasQuestions && (
@@ -138,6 +135,8 @@ export function CandidateCard({
             candidate={candidate}
             onSchedule={onSchedule}
             onVideo={onVideo}
+            onMeetLinkSaved={onMeetLinkSaved}
+            onInterviewDeleted={onInterviewDeleted}
           />
         </div>
       </div>

@@ -59,7 +59,8 @@ CREATE TABLE IF NOT EXISTS interviews (
     candidate_id INT NOT NULL REFERENCES candidates(id),
     date         DATE,
     time         TIME,
-    type         VARCHAR(50)
+    type         VARCHAR(50),
+    meet_link    TEXT
 );
 
 -- 8. sent_questions
@@ -135,7 +136,14 @@ CREATE TABLE IF NOT EXISTS screening_results (
     UNIQUE (candidate_id)
 );
 
--- 12. assessments
+-- 13. settings
+CREATE TABLE IF NOT EXISTS settings (
+    key   VARCHAR(100) PRIMARY KEY,
+    value TEXT
+);
+INSERT INTO settings (key, value) VALUES ('organizer_email', 'vandana.bandlamudi@scripbox.com') ON CONFLICT (key) DO NOTHING;
+
+-- 14. assessments
 CREATE TABLE IF NOT EXISTS assessments (
     id           SERIAL PRIMARY KEY,
     candidate_id INT NOT NULL REFERENCES candidates(id),

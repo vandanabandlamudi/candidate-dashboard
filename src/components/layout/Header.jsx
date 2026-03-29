@@ -10,7 +10,7 @@ const SCREEN_TITLE = {
 
 export function Header({ screen, globalSearch, onGlobalSearch, viewMode, onViewModeChange, onMenuOpen }) {
   return (
-    <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3">
+    <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3">
       {/* Hamburger — mobile only */}
       <button
         onClick={onMenuOpen}

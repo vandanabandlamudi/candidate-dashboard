@@ -5,7 +5,7 @@ export function RoundPipeline({ status }) {
   if (activeIndex === -1) return null
 
   return (
-    <div className="flex items-center gap-1 mt-1.5">
+    <div className="flex items-center gap-1 mt-2 ml-7">
       {STAGES.map((stage, i) => (
         <div key={stage} className="flex items-center gap-1">
           <div
@@ -22,7 +22,6 @@ export function RoundPipeline({ status }) {
           )}
         </div>
       ))}
-      <span className="text-[10px] text-gray-400 ml-1">{status}</span>
     </div>
   )
 }

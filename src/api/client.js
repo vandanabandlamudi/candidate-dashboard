@@ -23,6 +23,8 @@ export const api = {
   // Interviews
   getInterviews:   (id)         => request(`/api/candidates/${id}/interviews`),
   createInterview: (id, data)   => request(`/api/candidates/${id}/interviews`, { method: 'POST', body: JSON.stringify(data) }),
+  deleteInterview: (id)         => request(`/api/candidates/${id}/interviews`, { method: 'DELETE' }),
+  updateMeetLink:  (id, link)   => request(`/api/candidates/${id}/interviews/meet-link`, { method: 'PATCH', body: JSON.stringify({ meet_link: link }) }),
 
   // Submissions
   getSubmissions:      (id) => request(`/api/candidates/${id}/submissions`),
@@ -49,6 +51,13 @@ export const api = {
 
   // Jobs
   getJobs: () => request('/api/jobs'),
+
+  // Settings
+  getSettings:    ()       => request('/api/settings'),
+  updateSettings: (patch)  => request('/api/settings', { method: 'PATCH', body: JSON.stringify(patch) }),
+
+  // Google Meet
+  createMeet: (candidateId, date, time) => request('/api/meet', { method: 'POST', body: JSON.stringify({ candidateId, date, time }) }),
 
   // Screening Results
   getScreeningResults:  ()       => request('/api/screening-results'),

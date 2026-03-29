@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
 import pool from './db.js';
-import { getFolderIdForRole, pickRandomDocFromFolder, exportDocAsText } from './drive.js';
+import { getFolderIdForRole, pickRandomDocFromFolder, exportDocAsText, createMeetEvent } from './drive.js';
 import { parseMcq } from './parseMcq.js';
 
 dotenv.config();
@@ -30,10 +30,12 @@ app.get('/api/candidates', async (req, res) => {
     const result = await pool.query(`
       SELECT c.id, c.name, c.email, c.phone, c.exp, c.title, c.company, c.summary, c.skills,
              c.applied_date AS "appliedDate",
-             r.name AS role, s.label AS status
+             r.name AS role, s.label AS status,
+             i.date AS "interviewDate", i.time AS "interviewTime", i.type AS "interviewType", i.meet_link AS "meetLink"
       FROM candidates c
       LEFT JOIN roles r ON c.role_id = r.id
       LEFT JOIN statuses s ON c.status_id = s.id
+      LEFT JOIN LATERAL (SELECT * FROM interviews WHERE candidate_id = c.id ORDER BY id DESC LIMIT 1) i ON true
       ORDER BY c.applied_date DESC
     `);
     res.json(result.rows);
@@ -208,13 +210,39 @@ app.get('/api/candidates/:id/interviews', async (req, res) => {
 });
 
 app.post('/api/candidates/:id/interviews', async (req, res) => {
-  const { date, time, type } = req.body;
+  const { date, time, type, meet_link } = req.body;
   try {
     const result = await pool.query(
-      'INSERT INTO interviews (candidate_id, date, time, type) VALUES ($1,$2,$3,$4) RETURNING *',
-      [req.params.id, date, time, type]
+      'INSERT INTO interviews (candidate_id, date, time, type, meet_link) VALUES ($1,$2,$3,$4,$5) RETURNING *',
+      [req.params.id, date, time, type, meet_link || null]
     );
     res.status(201).json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/api/candidates/:id/interviews/meet-link', async (req, res) => {
+  const { meet_link } = req.body;
+  try {
+    // Update the most recent interview for this candidate
+    const result = await pool.query(
+      `UPDATE interviews SET meet_link = $1
+       WHERE id = (SELECT id FROM interviews WHERE candidate_id = $2 ORDER BY id DESC LIMIT 1)
+       RETURNING *`,
+      [meet_link, req.params.id]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'No interview found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/candidates/:id/interviews', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM interviews WHERE candidate_id = $1', [req.params.id]);
+    res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -755,6 +783,60 @@ Sort by score descending.`;
       // return res.status(502).json({ error: 'Ollama did not return a JSON array' });
     }
     res.json(results);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Settings ---
+app.get('/api/settings', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT key, value FROM settings');
+    const settings = Object.fromEntries(result.rows.map((r) => [r.key, r.value]));
+    res.json(settings);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/api/settings', async (req, res) => {
+  const updates = req.body; // { key: value, ... }
+  try {
+    await Promise.all(
+      Object.entries(updates).map(([key, value]) =>
+        pool.query(
+          'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2',
+          [key, value]
+        )
+      )
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Google Meet ---
+app.post('/api/meet', async (req, res) => {
+  const { candidateId, date, time } = req.body;
+  if (!candidateId || !date || !time) {
+    return res.status(400).json({ error: 'candidateId, date, and time are required' });
+  }
+  try {
+    // Get organizer email from settings
+    const settingsRes = await pool.query("SELECT value FROM settings WHERE key = 'organizer_email'");
+    const organizerEmail = settingsRes.rows[0]?.value || 'careers@scripbox.com';
+
+    // Get candidate details
+    const candRes = await pool.query(
+      `SELECT c.name, c.email, r.name AS role FROM candidates c LEFT JOIN roles r ON c.role_id = r.id WHERE c.id = $1`,
+      [candidateId]
+    );
+    if (!candRes.rows.length) return res.status(404).json({ error: 'Candidate not found' });
+    const { name, email, role } = candRes.rows[0];
+
+    const result = await createMeetEvent({ organizerEmail, candidateEmail: email, candidateName: name, role, date, time });
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

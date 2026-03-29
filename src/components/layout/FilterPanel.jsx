@@ -62,9 +62,9 @@ export function FilterPanel({
       {hasActiveFilters && (
         <button
           onClick={onClearAll}
-          className="text-xs text-indigo-600 font-medium hover:text-indigo-800 whitespace-nowrap pb-1"
+          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors whitespace-nowrap"
         >
-          Clear all
+          ✕ Clear All
         </button>
       )}
     </div>
