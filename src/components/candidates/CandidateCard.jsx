@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { StatusDropdown } from '../common/StatusDropdown'
 import { RoundPipeline }  from '../common/RoundPipeline'
 import { IcoCheck }       from '../common/Icons'
 import { ActionButtons }  from './ActionButtons'
 import { fmtDate, highlight } from '../../utils/helpers'
+import { STATUSES, STATUS_LABELS } from '../../constants/statuses'
 
 export function CandidateCard({
   candidate,
@@ -17,15 +18,15 @@ export function CandidateCard({
   onViewDetail,
   onMeetLinkSaved,
   onInterviewDeleted,
+  onSendQuestionnaire,
 }) {
   const [expanded,      setExpanded]      = useState(false)
-  const [pendingStatus, setPendingStatus] = useState(candidate.status)
-  useEffect(() => { setPendingStatus(candidate.status) }, [candidate.status])
+  const [showMoveModal, setShowMoveModal] = useState(false)
   const hl = (text) => highlight(text, searchTerm)
   const hasQuestions = candidate.sentQuestions?.length > 0
-  const isDirty = pendingStatus !== candidate.status
 
   return (
+    <>
     <div
       className={`bg-white rounded-2xl border-2 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col ${
         selected ? 'border-indigo-400 ring-2 ring-indigo-100' : 'border-gray-200'
@@ -64,7 +65,7 @@ export function CandidateCard({
 
           {/* Status */}
           <div onClick={(e) => e.stopPropagation()}>
-            <StatusDropdown currentStatus={pendingStatus} onChange={setPendingStatus} />
+            <StatusDropdown currentStatus={candidate.status} onChange={(s) => onStatusChange(candidate.id, s)} />
           </div>
         </div>
 
@@ -121,11 +122,21 @@ export function CandidateCard({
 
       {/* Card footer with actions */}
       <div className="border-t border-gray-100 px-4 py-2 flex items-center justify-between bg-gray-50">
-        <span className="text-[10px] text-gray-400">Applied {fmtDate(candidate.appliedDate)}</span>
-        <div className="flex items-center gap-1">
-          {isDirty && (
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-gray-400">Applied {fmtDate(candidate.appliedDate)}</span>
+          {candidate.status === 'Shortlist' && onSendQuestionnaire && (
             <button
-              onClick={(e) => { e.stopPropagation(); onStatusChange(candidate.id, pendingStatus) }}
+              onClick={(e) => { e.stopPropagation(); onSendQuestionnaire(candidate) }}
+              className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-colors"
+            >
+              Send Questionnaire
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          {selected && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowMoveModal(true) }}
               className="text-[11px] font-semibold px-3 py-1 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
             >
               Move
@@ -141,5 +152,28 @@ export function CandidateCard({
         </div>
       </div>
     </div>
+
+    {/* Move modal */}
+    {showMoveModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowMoveModal(false)} />
+        <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xs p-5 space-y-3">
+          <h2 className="text-sm font-bold text-gray-900">Move <span className="text-indigo-600">{candidate.name}</span> to</h2>
+          <div className="space-y-1.5">
+            {STATUSES.filter((s) => s !== candidate.status).map((s) => (
+              <button
+                key={s}
+                onClick={() => { onStatusChange(candidate.id, s); setShowMoveModal(false) }}
+                className="w-full text-left px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
+              >
+                {STATUS_LABELS[s] ?? s}
+              </button>
+            ))}
+          </div>
+          <button onClick={() => setShowMoveModal(false)} className="w-full text-xs text-gray-400 hover:text-gray-600 pt-1">Cancel</button>
+        </div>
+      </div>
+    )}
+    </>
   )
 }
