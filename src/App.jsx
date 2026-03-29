@@ -5,7 +5,6 @@ import { useToast }         from './hooks/useToast'
 import { useCandidates }    from './hooks/useCandidates'
 import { useFilters }       from './hooks/useFilters'
 import { useSelection }     from './hooks/useSelection'
-import { useQuestionnaire } from './hooks/useQuestionnaire'
 import { useQuestionBank }    from './hooks/useQuestionBank'
 import { useQuestionPapers }  from './hooks/useQuestionPapers'
 
@@ -29,9 +28,9 @@ import { IcoCheck }   from './components/common/Icons'
 // Modals
 import { ScheduleModal }       from './components/modals/ScheduleModal'
 import { DeleteModal }         from './components/modals/DeleteModal'
-import { QuestionnaireModal }    from './components/modals/QuestionnaireModal'
 import { SentQuestionsDrawer }   from './components/modals/SentQuestionsDrawer'
 import { ManageQuestionsModal }  from './components/modals/ManageQuestionsModal'
+import { AssignPaperModal }      from './components/papers/AssignPaperModal'
 import { AssessmentsScreen }     from './screens/AssessmentsScreen'
 import { QuestionPapersScreen }  from './screens/QuestionPapersScreen'
 import { JobsScreen }            from './screens/JobsScreen'
@@ -49,6 +48,7 @@ export default function App() {
   const [showManageQ,    setShowManageQ]    = useState(false)
   const [detailC,        setDetailC]        = useState(null)
   const [sidebarOpen,    setSidebarOpen]    = useState(false)
+  const [assignModal,    setAssignModal]    = useState(null)  // { candidate, paper }
 
   // ── Hooks ──────────────────────────────────────────────────────────────────
   const { toastMessage, showToast } = useToast()
@@ -71,7 +71,6 @@ export default function App() {
     handleDelete,
     handleMeetLinkSaved,
     handleInterviewDeleted,
-    applySentQuestions,
     updateAssessment,
   } = useCandidates(showToast)
 
@@ -98,14 +97,16 @@ export default function App() {
     someSelected,
   } = useSelection(filtered)
 
-  const {
-    showQModal, setShowQModal,
-    r1Selected,
-    previewMap,
-    usedCountByRole,
-    totalByRole,
-    confirmSend,
-  } = useQuestionnaire(candidates, selectedIds, applySentQuestions, clearSelection, showToast, questionBank)
+  // ── Assign paper (Send Questionnaire from Candidates screen) ───────────────
+  const openAssignModal = () => {
+    const shortlisted = [...selectedIds]
+      .map((id) => candidates.find((c) => c.id === id))
+      .filter((c) => c && c.status === 'Shortlist')
+    if (shortlisted.length === 0) return
+    const candidate = shortlisted[0]
+    const paper = papers.find((p) => p.role === candidate.role) ?? null
+    setAssignModal({ candidate, paper })
+  }
 
   // ── Bulk status ────────────────────────────────────────────────────────────
   const applyBulkStatus = () => {
@@ -255,7 +256,7 @@ export default function App() {
                 bulkStatus={bulkStatus}
                 onBulkStatusChange={setBulkStatus}
                 onApplyBulk={applyBulkStatus}
-                onSendQuestionnaire={() => setShowQModal(true)}
+                onSendQuestionnaire={openAssignModal}
                 onClearSelection={() => { clearSelection(); setBulkStatus('') }}
               />
 
@@ -359,14 +360,14 @@ export default function App() {
       </div>
 
       {/* ── Modals & overlays ─────────────────────────────────────────────── */}
-      {showQModal && (
-        <QuestionnaireModal
-          candidates={r1Selected}
-          previewMap={previewMap}
-          usedCountByRole={usedCountByRole}
-          totalByRole={totalByRole}
-          onConfirm={confirmSend}
-          onClose={() => setShowQModal(false)}
+      {assignModal && (
+        <AssignPaperModal
+          paper={assignModal.paper}
+          candidates={[assignModal.candidate]}
+          submissions={submissions}
+          pendingTokens={pendingTokens}
+          onGetLink={(c) => renewToken(assignModal.paper.id, c.id)}
+          onClose={() => setAssignModal(null)}
         />
       )}
 
