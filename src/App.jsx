@@ -252,7 +252,7 @@ export default function App() {
               {/* Bulk actions */}
               <BulkActionBar
                 selectedCount={selectedIds.size}
-                r1SelectedCount={r1Selected.length}
+                r1SelectedCount={[...selectedIds].filter((id) => candidates.find((c) => c.id === id)?.status === 'Shortlist').length}
                 bulkStatus={bulkStatus}
                 onBulkStatusChange={setBulkStatus}
                 onApplyBulk={applyBulkStatus}
