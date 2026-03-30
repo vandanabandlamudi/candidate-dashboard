@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 // Hooks
 import { useToast }         from './hooks/useToast'
@@ -54,7 +54,7 @@ export default function App() {
   const { toastMessage, showToast } = useToast()
   const { questionBank, setQuestionBank } = useQuestionBank()
   const {
-    papers, addPaper, updatePaper, deletePaper, submissions, pendingTokens, renewToken,
+    papers, addPaper, updatePaper, deletePaper, submissions, pendingTokens, renewToken, refetchAll,
     importFromDrive, importing, importError,
   } = useQuestionPapers()
 
@@ -96,6 +96,12 @@ export default function App() {
     allSelected,
     someSelected,
   } = useSelection(filtered)
+
+  // ── Refetch all data when navigating screens ───────────────────────────────
+  useEffect(() => {
+    refetch()
+    refetchAll()
+  }, [screen]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Assign paper (Send Questionnaire from Candidates screen) ───────────────
   const openAssignModal = () => {

@@ -6,8 +6,8 @@ export function useQuestionPapers() {
   const [submissions,   setSubmissions]   = useState({})
   const [pendingTokens, setPendingTokens] = useState([])
 
-  // ── Load papers and submissions from DB on mount ──────────────────────────
-  useEffect(() => {
+  // ── Load papers and submissions from DB ───────────────────────────────────
+  const fetchAll = () => {
     api.getPapers()
       .then((rows) => setPapers(rows))
       .catch(() => {})
@@ -41,7 +41,9 @@ export function useQuestionPapers() {
     api.getPendingTokens()
       .then((rows) => setPendingTokens(rows))
       .catch(() => {})
-  }, [])
+  }
+
+  useEffect(() => { fetchAll() }, [])
 
   const addPaper = (paper) => {
     const newPaper = { ...paper, id: `paper_${Date.now()}` }
@@ -153,7 +155,7 @@ export function useQuestionPapers() {
 
   return {
     papers, addPaper, updatePaper, deletePaper, submitPaper, manualGrade, getSubmission,
-    submissions, pendingTokens, renewToken,
+    submissions, pendingTokens, renewToken, refetchAll: fetchAll,
     importFromDrive, importing, importError,
   }
 }

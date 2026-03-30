@@ -6,7 +6,7 @@ import pool from './db.js';
 import { getFolderIdForRole, pickRandomDocFromFolder, exportDocAsText, createMeetEvent } from './drive.js';
 import { parseMcq } from './parseMcq.js';
 
-dotenv.config();
+dotenv.config({ path: new URL('.env', import.meta.url).pathname });
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -515,6 +515,14 @@ app.post('/api/papers/:paperId/assign', async (req, res) => {
       'INSERT INTO test_tokens (token, candidate_id, paper_id) VALUES ($1, $2, $3)',
       [token, candidateId, paperId]
     );
+
+    // Move candidate to "In Evaluation R1" when a test link is assigned
+    await pool.query(
+      `UPDATE candidates SET status_id = (SELECT id FROM statuses WHERE label = 'In Evaluation R1')
+       WHERE id = $1`,
+      [candidateId]
+    );
+
     res.status(201).json({ token });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -631,11 +639,7 @@ app.post('/api/test/:token/submit', async (req, res) => {
               SELECT next_status_id FROM statuses WHERE id = (SELECT status_id FROM candidates WHERE id = $1)
             ) IS NOT NULL
           `, [candidate_id]);
-        } else {
-          await client.query(
-            'UPDATE candidates SET status_id = (SELECT id FROM statuses WHERE label = $1) WHERE id = $2',
-            ['Rejected', candidate_id]
-          );
+        // score < 8: leave in "In Evaluation R1" — recruiter rejects manually via UI
         }
       }
 

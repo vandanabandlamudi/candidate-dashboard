@@ -24,6 +24,7 @@ export function QuestionPapersScreen({
   const [editPaper,     setEditPaper]     = useState(null)
   const [assignPaper,   setAssignPaper]   = useState(null)
   const [showDriveModal, setShowDriveModal] = useState(false)
+  const [localAssigned, setLocalAssigned] = useState([])       // optimistic pending entries
 
   const selectedPaper = papers.find((p) => p.id === selectedId) ?? null
 
@@ -170,9 +171,13 @@ export function QuestionPapersScreen({
           paper={assignPaper}
           candidates={candidates}
           submissions={submissions}
-          pendingTokens={pendingTokens}
+          pendingTokens={[
+            ...pendingTokens,
+            ...localAssigned.filter((la) => !pendingTokens.some((t) => String(t.candidate_id) === String(la.candidate_id))),
+          ]}
           onGetLink={async (candidate) => {
             const { token } = await api.assignPaper(assignPaper.id, candidate.id)
+            setLocalAssigned((prev) => [...prev, { candidate_id: candidate.id, paper_id: assignPaper.id }])
             return { token, url: `${window.location.origin}?token=${token}` }
           }}
           onClose={() => setAssignPaper(null)}
