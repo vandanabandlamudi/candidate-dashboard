@@ -140,6 +140,9 @@ async function seed() {
     await client.query(`ALTER TABLE submission_answers DROP CONSTRAINT IF EXISTS submission_answers_question_id_fkey`)
     await client.query(`ALTER TABLE submission_answers ALTER COLUMN question_id TYPE VARCHAR(100)`)
 
+    // 0b. Clear transactional data so candidates reset cleanly
+    await client.query(`TRUNCATE screening_results, interviews, sent_questions, submissions, submission_answers RESTART IDENTITY CASCADE`)
+
     // 1. Roles
     await client.query(`SELECT setval('roles_id_seq', COALESCE((SELECT MAX(id) FROM roles), 1), (SELECT MAX(id) IS NOT NULL FROM roles))`)
     const roleIdMap = {}

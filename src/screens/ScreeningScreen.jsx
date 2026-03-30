@@ -907,8 +907,7 @@ export function ScreeningScreen({
             })()}
 
           {/* Toolbar — select all + verdict filters, above shortlisted cards */}
-          {(activeResultsWithStatus.length > 0 ||
-            notYetScreened.length > 0) && (
+          {(allEligibleIds.length > 0 || activeResultsWithStatus.length > 0) && (
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-3 flex-wrap">
                 <button
