@@ -474,8 +474,8 @@ app.post('/api/screening-results', async (req, res) => {
   try {
     await Promise.all(results.map((r) =>
       pool.query(
-        `INSERT INTO screening_results (candidate_id, job_title, department, score, verdict, reasons, concern)
-         VALUES ($1,$2,$3,$4,$5,$6,$7)
+        `INSERT INTO screening_results (candidate_id, job_title, department, score, verdict, reasons, concern, review_only)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
          ON CONFLICT (candidate_id) DO UPDATE SET
            job_title   = EXCLUDED.job_title,
            department  = EXCLUDED.department,
@@ -483,8 +483,9 @@ app.post('/api/screening-results', async (req, res) => {
            verdict     = EXCLUDED.verdict,
            reasons     = EXCLUDED.reasons,
            concern     = EXCLUDED.concern,
+           review_only = CASE WHEN screening_results.review_only = TRUE THEN TRUE ELSE EXCLUDED.review_only END,
            screened_at = CURRENT_TIMESTAMP`,
-        [r.id, r.job_title ?? null, r.department ?? null, r.score, r.verdict, r.reasons ?? [], r.concern ?? null]
+        [r.id, r.job_title ?? null, r.department ?? null, r.score, r.verdict, r.reasons ?? [], r.concern ?? null, r.review_only ?? false]
       )
     ));
     res.status(201).json({ saved: results.length });

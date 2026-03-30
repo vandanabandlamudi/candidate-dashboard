@@ -53,6 +53,7 @@ function CandidateResult({
 }) {
   const style = VERDICT_STYLES[r.verdict] || VERDICT_STYLES["Partial Match"];
   const alreadyMoved = r.status && r.status !== "Applied";
+  const isReviewOnly = r.review_only === true;
 
   // full candidate object for ActionButtons (falls back to r if not found)
   const fullCandidate = candidate ?? r;
@@ -177,7 +178,7 @@ function CandidateResult({
           {alreadyMoved && onAssignPaper && (
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-semibold text-green-600">
-                Moved to Shortlisted
+                {isReviewOnly ? `Manually moved to ${STATUS_LABELS[r.status] ?? r.status}` : "Moved to Shortlisted"}
               </span>
               <button
                 onClick={() => onAssignPaper(fullCandidate)}
@@ -265,6 +266,7 @@ export function ScreeningScreen({
         verdict: r.verdict,
         reasons: r.reasons ?? [],
         concern: r.concern,
+        review_only: r.review_only ?? false,
         status: statusById[r.candidate_id] ?? "Applied",
       });
     });
@@ -362,6 +364,7 @@ export function ScreeningScreen({
             ...r,
             job_title: job.job_title,
             department: job.department,
+            review_only: false,
           })),
         );
         try {
@@ -409,20 +412,82 @@ export function ScreeningScreen({
   };
 
   const [roleLoading, setRoleLoading] = useState(null); // role string being screened
+  const [reviewingId, setReviewingId] = useState(null); // single candidate being reviewed
 
-  const runScreeningForRole = (role) => {
+  const reviewSingleCandidate = async (candidate) => {
+    setReviewingId(candidate.id);
+    setError(null);
+    const role = candidate.role;
+    const job = jobsMap[role] || {
+      job_title: role, department: role,
+      experience_from: "0", experience_to: "∞",
+      salary_min: null, salary_max: null,
+      employee_type: "Full Time", is_remote: 0,
+    };
+    try {
+      const res = await fetch(`${BASE}/api/screen`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ job, candidates: [candidate] }),
+      });
+      const text = await res.text();
+      let parsed;
+      try { parsed = JSON.parse(text); } catch (_) {
+        throw new Error(`Server returned non-JSON (${res.status}): ${text.slice(0, 200)}`);
+      }
+      if (!res.ok) throw new Error(parsed?.error || `Review failed (${res.status})`);
+      const result = { ...parsed[0], id: candidate.id, review_only: true, status: candidate.status };
+      await api.saveScreeningResults([{
+        ...result,
+        job_title: job.job_title,
+        department: job.department,
+        review_only: true,
+      }]).catch(() => {});
+      setResults((prev) => {
+        const existing = (prev[role] || []).filter((r) => r.id !== candidate.id);
+        return { ...prev, [role]: [...existing, result] };
+      });
+      setScreened(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setReviewingId(null);
+    }
+  };
+
+  const runScreeningForRole = (role, reviewOnly = false) => {
     setRoleLoading(role);
     setError(null);
 
     screenRoles([role])
       .then(async (all) => {
         const { data } = all[0];
+        if (reviewOnly) {
+          // Save to DB with review_only=true, don't change status
+          const { job } = all[0];
+          const flat = data.map((r) => ({
+            ...r,
+            job_title: job.job_title,
+            department: job.department,
+            review_only: true,
+          }));
+          await api.saveScreeningResults(flat).catch(() => {});
+          const enriched = data.map((r) => ({
+            ...r,
+            review_only: true,
+            status: statusById[r.id] ?? "Applied",
+          }));
+          setResults((prev) => ({ ...prev, [role]: enriched }));
+          setScreened(true);
+          return;
+        }
         setSaving(true);
         const flat = all.flatMap(({ data: d, job }) =>
           d.map((r) => ({
             ...r,
             job_title: job.job_title,
             department: job.department,
+            review_only: false,
           })),
         );
         try {
@@ -442,7 +507,6 @@ export function ScreeningScreen({
           const promotedIds = new Set(toPromote.map((r) => r.id));
           const enriched = data.map((r) => ({
             ...r,
-            // Preserve existing status for manually moved candidates
             status: promotedIds.has(r.id)
               ? "Shortlist"
               : (statusById[r.id] ?? "Applied"),
@@ -884,42 +948,46 @@ export function ScreeningScreen({
                   </span>
                   {allTabSelected ? "Deselect all" : "Select all"}
                 </button>
-                <button
-                  onClick={() => setVerdictFilter("All")}
-                  className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${
-                    verdictFilter === "All"
-                      ? "bg-gray-800 text-white border-gray-800"
-                      : "bg-white text-gray-500 border-gray-200 hover:border-gray-400"
-                  }`}
-                >
-                  All{" "}
-                  <span
-                    className={`ml-1 font-bold ${verdictFilter === "All" ? "text-gray-300" : "text-gray-400"}`}
-                  >
-                    {activeResultsWithStatus.length}
-                  </span>
-                </button>
-                {Object.entries(VERDICT_STYLES).map(([verdict, style]) => {
-                  const count = verdictCounts[verdict] || 0;
-                  if (!count) return null;
-                  return (
+                {activeResultsWithStatus.length > 0 && (
+                  <>
                     <button
-                      key={verdict}
-                      onClick={() =>
-                        setVerdictFilter(
-                          verdictFilter === verdict ? "All" : verdict,
-                        )
-                      }
+                      onClick={() => setVerdictFilter("All")}
                       className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${
-                        verdictFilter === verdict
-                          ? style.badge
-                          : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"
+                        verdictFilter === "All"
+                          ? "bg-gray-800 text-white border-gray-800"
+                          : "bg-white text-gray-500 border-gray-200 hover:border-gray-400"
                       }`}
                     >
-                      {count} {verdict}
+                      All{" "}
+                      <span
+                        className={`ml-1 font-bold ${verdictFilter === "All" ? "text-gray-300" : "text-gray-400"}`}
+                      >
+                        {activeResultsWithStatus.length}
+                      </span>
                     </button>
-                  );
-                })}
+                    {Object.entries(VERDICT_STYLES).map(([verdict, style]) => {
+                      const count = verdictCounts[verdict] || 0;
+                      if (!count) return null;
+                      return (
+                        <button
+                          key={verdict}
+                          onClick={() =>
+                            setVerdictFilter(
+                              verdictFilter === verdict ? "All" : verdict,
+                            )
+                          }
+                          className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${
+                            verdictFilter === verdict
+                              ? style.badge
+                              : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"
+                          }`}
+                        >
+                          {count} {verdict}
+                        </button>
+                      );
+                    })}
+                  </>
+                )}
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 {selectedApplied.length > 0 && (
@@ -1039,12 +1107,12 @@ export function ScreeningScreen({
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              runScreeningForRole(c.role);
+                              reviewSingleCandidate(c);
                             }}
-                            disabled={roleLoading === c.role || loading}
+                            disabled={reviewingId === c.id || loading}
                             className="shrink-0 flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors disabled:opacity-50"
                           >
-                            {roleLoading === c.role ? (
+                            {reviewingId === c.id ? (
                               <>
                                 <div className="w-3 h-3 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" />
                                 Reviewing…

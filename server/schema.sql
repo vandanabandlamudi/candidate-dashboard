@@ -132,6 +132,7 @@ CREATE TABLE IF NOT EXISTS screening_results (
     verdict      VARCHAR(50) NOT NULL,
     reasons      TEXT[] NOT NULL DEFAULT '{}',
     concern      TEXT,
+    review_only  BOOLEAN NOT NULL DEFAULT FALSE,
     screened_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (candidate_id)
 );

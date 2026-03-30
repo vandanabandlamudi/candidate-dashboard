@@ -141,7 +141,7 @@ async function seed() {
     await client.query(`ALTER TABLE submission_answers ALTER COLUMN question_id TYPE VARCHAR(100)`)
 
     // 1. Roles
-    await client.query(`SELECT setval('roles_id_seq', COALESCE((SELECT MAX(id) FROM roles), 0))`)
+    await client.query(`SELECT setval('roles_id_seq', COALESCE((SELECT MAX(id) FROM roles), 1), (SELECT MAX(id) IS NOT NULL FROM roles))`)
     const roleIdMap = {}
     for (const name of ROLES) {
       const res = await client.query(
@@ -154,7 +154,7 @@ async function seed() {
 
     // 2. Statuses — two-pass: insert first, then link next_status_id
     // Reset sequence to avoid PK conflicts if table already has rows
-    await client.query(`SELECT setval('statuses_id_seq', COALESCE((SELECT MAX(id) FROM statuses), 0))`)
+    await client.query(`SELECT setval('statuses_id_seq', COALESCE((SELECT MAX(id) FROM statuses), 1), (SELECT MAX(id) IS NOT NULL FROM statuses))`)
     const statusIdMap = {}
     for (const s of STATUSES) {
       const res = await client.query(

@@ -10,6 +10,11 @@ async function migrate() {
   const client = await pool.connect();
   try {
     await client.query(sql);
+    // Additive migrations — safe to run multiple times
+    await client.query(`
+      ALTER TABLE screening_results
+        ADD COLUMN IF NOT EXISTS review_only BOOLEAN NOT NULL DEFAULT FALSE
+    `);
     console.log('Migration complete — all tables created.');
   } catch (err) {
     console.error('Migration failed:', err.message);
