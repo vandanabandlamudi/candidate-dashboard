@@ -44,7 +44,7 @@ export async function createMeetEvent({ organizerEmail, candidateEmail, candidat
 
   const event = {
     summary: `Interview – ${candidateName} (${role})`,
-    description: `Interview scheduled via AI-Powered Resume Screening dashboard.`,
+    description: `Interview scheduled with Scripbox`,
     start:  { dateTime: toISO(startDateTime), timeZone: 'Asia/Kolkata' },
     end:    { dateTime: toISO(endDateTime),   timeZone: 'Asia/Kolkata' },
     attendees: [

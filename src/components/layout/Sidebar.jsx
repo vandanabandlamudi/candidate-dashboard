@@ -65,7 +65,7 @@ export function Sidebar({ screen, onScreenChange, onManageQuestions, open, onClo
       `}>
         {/* Logo */}
         <div className="px-5 py-5 border-b border-gray-100 flex items-center justify-between">
-          <h1 className="text-base font-bold text-gray-900">AI-Powered Resume Screening</h1>
+          <h1 className="text-base font-bold text-gray-900">AI-Powered Candidate Screening</h1>
           <button onClick={onClose} className="md:hidden text-gray-400 hover:text-gray-600">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

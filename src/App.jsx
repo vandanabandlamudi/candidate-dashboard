@@ -172,7 +172,7 @@ export default function App() {
           onMenuOpen={() => setSidebarOpen(true)}
         />
 
-        <main className="flex-1 overflow-y-auto overflow-x-hidden">
+        <main className="flex-1 flex flex-col overflow-x-hidden overflow-y-auto min-h-0">
           {/* {screen === 'settings' && <SettingsScreen />} */}
 
           {screen === 'jobs' && <JobsScreen candidates={candidates} />}

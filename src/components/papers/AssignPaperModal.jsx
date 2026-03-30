@@ -77,6 +77,13 @@ export function AssignPaperModal({ paper, candidates, submissions, pendingTokens
               </button>
             </div>
             <button
+              disabled
+              className="w-full text-xs font-semibold px-4 py-2 rounded-xl border border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              ✉️ Email to candidate
+              <span className="text-[10px] font-medium bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded-full">Coming soon</span>
+            </button>
+            <button
               onClick={() => { setLinkInfo(null); setCopied(false) }}
               className="text-xs text-gray-500 hover:text-gray-700 underline"
             >

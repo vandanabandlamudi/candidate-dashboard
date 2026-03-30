@@ -75,7 +75,7 @@ export function useCandidates(showToast) {
         : '🏢 In-Person Interview'
       const title   = encodeURIComponent(`Interview – ${candidate.name} (${candidate.role})`)
       const details = encodeURIComponent(
-        `Interview Type: ${typeLabel}\nCandidate: ${candidate.name}\nRole: ${candidate.role}\nEmail: ${candidate.email || 'N/A'}\n\nScheduled via AI-Powered Resume Screening dashboard.`
+        `Interview Type: ${typeLabel}\nCandidate: ${candidate.name}\nRole: ${candidate.role}\nEmail: ${candidate.email || 'N/A'}\n\nScheduled via  Resume Screening dashboard.`
       )
       const guests   = candidate.email ? encodeURIComponent(candidate.email) : ''
       const startStr = `${interviewData.date.replace(/-/g, '')}T${interviewData.time.replace(':', '')}00`
