@@ -65,7 +65,7 @@ export function CandidateCard({
 
           {/* Status */}
           <div onClick={(e) => e.stopPropagation()}>
-            <StatusDropdown currentStatus={candidate.status} onChange={(s) => onStatusChange(candidate.id, s)} />
+            <StatusDropdown currentStatus={candidate.status} onChange={(s) => { onStatusChange(candidate.id, s); if (selected) onToggleSelect(candidate.id) }} />
           </div>
         </div>
 
@@ -163,7 +163,7 @@ export function CandidateCard({
             {STATUSES.filter((s) => s !== candidate.status).map((s) => (
               <button
                 key={s}
-                onClick={() => { onStatusChange(candidate.id, s); setShowMoveModal(false) }}
+                onClick={() => { onStatusChange(candidate.id, s); setShowMoveModal(false); if (selected) onToggleSelect(candidate.id) }}
                 className="w-full text-left px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
               >
                 {STATUS_LABELS[s] ?? s}

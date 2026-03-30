@@ -289,13 +289,10 @@ export function ScreeningScreen({
     return Promise.all(
       rolesToScreen.map(async (role) => {
         const allRoleCandidates = candidates.filter((c) => c.role === role);
-        // Skip candidates already beyond Shortlist (Screen, Offer, etc.)
-        const toScreen = allRoleCandidates.filter(
-          (c) => !statusById[c.id] || statusById[c.id] === "Applied",
-        );
-        const alreadyMoved = allRoleCandidates.filter(
-          (c) => statusById[c.id] && statusById[c.id] !== "Applied",
-        );
+        // Screen all candidates that don't already have a screening result
+        const existingResultIds = new Set((results[role] || []).map((r) => r.id));
+        const toScreen = allRoleCandidates.filter((c) => !existingResultIds.has(c.id));
+        const alreadyMoved = allRoleCandidates.filter((c) => existingResultIds.has(c.id));
 
         const job = jobsMap[role] || {
           job_title: role,
@@ -430,11 +427,9 @@ export function ScreeningScreen({
         );
         try {
           await api.saveScreeningResults(flat);
-          // Auto-promote candidates with score >= 85 to Screen
+          // Only auto-promote Applied candidates (not manually moved ones)
           const toPromote = flat.filter(
-            (r) =>
-              r.score >= 85 &&
-              (statusById[r.id] === "Applied" || !statusById[r.id]),
+            (r) => r.score >= 85 && statusById[r.id] === "Applied",
           );
           if (toPromote.length > 0) {
             await Promise.all(
@@ -447,6 +442,7 @@ export function ScreeningScreen({
           const promotedIds = new Set(toPromote.map((r) => r.id));
           const enriched = data.map((r) => ({
             ...r,
+            // Preserve existing status for manually moved candidates
             status: promotedIds.has(r.id)
               ? "Shortlist"
               : (statusById[r.id] ?? "Applied"),
@@ -461,7 +457,6 @@ export function ScreeningScreen({
         }
         setSaving(false);
         setScreened(true);
-        setActiveTab(role);
       })
       .catch((err) => setError(err.message))
       .finally(() => setRoleLoading(null));
